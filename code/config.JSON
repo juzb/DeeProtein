@@ -1,0 +1,230 @@
+{
+  "-modelname": {
+    "short": "-n",
+    "value": "DeeProtein",
+    "help": "The name of the model.",
+    "type": "str"
+  },
+  "-traindata": {
+    "short": "-t",
+    "value": "/path/to/datasets/train.csv",
+    "help": "The file-path to the .csv file holding the samples of the train dataset.",
+    "type": "str"
+  },
+  "-validdata": {
+    "short": "-v",
+    "value": "/path/to/datasets/valid.csv",
+    "help": "The file-path to the .csv file holding the samples of the valid dataset.",
+    "type": "str"
+  },
+  "-gofile": {
+    "short": "-g",
+    "value": "/path/to/datasets/go_file.txt",
+    "help": "The file-path to the GO-file holding the classes to model should consider.",
+    "type": "str"
+  },
+  "-info_path": {
+    "short": "-ip",
+    "value": "/path/to/model_tests/",
+    "help": "The path where logs and the metrics calculation related files should be saved.",
+    "type": "str"
+  },
+  "-model_to_use": {
+    "short": "-mo",
+    "value": "/path/to/DeeProtein/model/model.py",
+    "help": "The Network to use. The specified network needs to fit the input and output shapes.",
+    "type": "str"
+  },
+  "-logging_level": {
+    "short": "-l",
+    "value": "INFO",
+    "help": "The basic level on which the logger should operate.",
+    "type": "str"
+  },
+  "-learningrate": {
+    "short": "-lr",
+    "value": 0.001,
+    "help": "The initial learning rate with which to start the training.",
+    "type": "float"
+  },
+  "-epsilon": {
+    "short": "-e",
+    "value": 0.0001,
+    "help": "The epsilon to apply when using ADAM-optimizer.",
+    "type": "float"
+  },
+  "-batchsize": {
+    "short": "-b",
+    "value": 1,
+    "help": "The batchsize to apply.",
+    "type": "int"
+  },
+  "-nblocks": {
+    "short": "-nb",
+    "value": 30,
+    "help": "The number of ResNet-blocks to apply in the model.",
+    "type": "int"
+  },
+  "-maxclassimbalance": {
+    "short": "-mci",
+    "value": 10,
+    "help": "Cutoff for the maximum inbalance between classes. If classes are more imbalanced than this given value, it will be replaced.",
+    "type": "int"
+  },
+  "-godagfile": {
+    "short": "-gof",
+    "value": "/path/to/gene_ontology/go.obo",
+    "help": ".obo file holding the information on the GO-DAG. File can be downloaded from http://geneontology.org/page/download-ontology.",
+    "type": "str"
+  },
+  "-windowlength": {
+    "short": "-w",
+    "value": 1000,
+    "help": "Length of sequences in the classifier, inputs will either be padded or sliced to match the windowlength",
+    "type": "int"
+  },
+  "-nepochs": {
+    "short": "-ne",
+    "value": 20,
+    "help": "Number of training epochs (one epoch: all training data is passed trough the model once)",
+    "type": "int"
+  },
+  "-depth": {
+    "short": "-d",
+    "value": 20,
+    "help": "Depth of one-hot encoding",
+    "type": "int"
+  },
+  "-allowsoftplacement": {
+    "short": "-spl",
+    "value": "True",
+    "help": "If tf should assign increasing space on the GPU or the maximum from the start (TRUE).",
+    "type": "str"
+  },
+  "-statsonly": {
+    "short": "-s",
+    "value": "False",
+    "help": "Write stats only on existing dumps, needs correct info path",
+    "type": "str"
+  },
+  "-restore": {
+    "short": "-r",
+    "value": "False",
+    "help": "Whether to restore a model or not. Defaults to False. If True a restorepath must be specified under the corresponding flag.",
+    "type": "str"
+  },
+  "-reload_checkpoint": {
+    "short": "-rl",
+    "value": "False",
+    "help": "Whether to reload the full model or not. Defaults to False. If True a restorepath must be specified under the corresponding flag.",
+    "type": "str"
+  },
+  "-restorepath": {
+    "short": "-rp",
+    "value": "/path/to/saves",
+    "help": "Specifies the path from which the model is to be restored. File has to be a .npz dump.",
+    "type": "str"
+  },
+  "-valid_after": {
+    "short": "-va",
+    "value": 2000,
+    "help": "Number of batches until early validation",
+    "type": "int"
+  },
+  "-early_valid_size": {
+    "short": "-vs",
+    "value": 500,
+    "help": "Maximum number of batches to use for early validation",
+    "type": "int"
+  },
+  "-keep_plots": {
+    "short": "-kp",
+    "value": "False",
+    "help": "Saves plots from older validations",
+    "type": "str"
+  },
+  "-mask": {
+    "short": "-m",
+    "value": "False",
+    "help": "Enable to use masked dataset stored in valid path",
+    "type": "str"
+  },
+  "-infer": {
+    "short": "-i",
+    "value": "False",
+    "help": "Enable to use inference mode",
+    "type": "str"
+  },
+  "-detailed_plots": {
+    "short": "-dp",
+    "value": "False",
+    "help": "Controls, whether detailed computationally expensive plots should be rendered",
+    "type": "str"
+  },
+  "-print_all": {
+    "short": "-pa",
+    "value": "False",
+    "help": "Enable to print all GO term scores in interactive inference",
+    "type": "str"
+  },
+  "-hide_zeros": {
+    "short": "-hz",
+    "value": "False",
+    "help": "Hides scores smaller than 0.001 in interactive inference",
+    "type": "str"
+  },
+  "-evaluate_dms": {
+    "short": "-dms",
+    "value": "False",
+    "help": "Evaluates dms dataset specified under valid path -v",
+    "type": "str"
+  },
+  "-mask_width": {
+    "short": "-mw",
+    "value": "1",
+    "help": "Maximum size of mask that is moved over the sequence",
+    "type": "int"
+  },
+  "-compare": {
+    "short": "-c",
+    "value": "False",
+    "help": "Compares multiple models based on their dumps, paths specified comma-separated unter -v",
+    "type": "str"
+  },
+  "-pltcolors": {
+    "short": "-pc",
+    "value": "blue,red,orange,green,turk,grey",
+    "help": "Compares multiple models based on their dumps, paths specified comma-separated unter -v",
+    "type": "str"
+  },
+  "-num_datapoint_offset": {
+    "short": "-ndp",
+    "value": 0,
+    "help": "Offset for num_datapoints for evaluating masked datasets. Useful, when the first x datapoints were already evaluated",
+    "type": "int"
+  },
+  "-print_num_params": {
+    "short": "-pnp",
+    "value": "False",
+    "help": "Printing the number of parameters is time intensive but interesting. Choose wisely...",
+    "type": "str"
+  },
+  "-test": {
+    "short": "-te",
+    "value": "False",
+    "help": "Set to activate test mode. Specify test datset under -v",
+    "type": "str"
+  },
+  "-pdbpath": {
+    "short": "-pdb",
+    "value": "/path/to/parse_pdb/",
+    "help": "Path to file containing pdb id, sequence, secondary structure, annotated site information",
+    "type": "str"
+  },
+  "-pfampath": {
+    "short": "-pfam",
+    "value": "/path/to/pfam_2",
+    "help": "Path to pfam directory, containing the pfam2pdb file",
+    "type": "str"
+  }
+}

@@ -1,0 +1,23 @@
+{
+    "red": "#9D1C20",
+    "mred": "#BB5651",
+    "blue": "#005493",
+    "mblue": "#6698BE",
+    "lblue": "#B2CBDD",
+    "fblue": "#C9D9FF",
+    "turk": "#009193",
+    "mturk": "#66BDBE",
+    "lturk": "#B3DEDE",
+    "green": "#009E73",
+    "mgreen": "#4CBD9A",
+    "lgreen": "#9AD5C3",
+    "grey": "#B9B9B9",
+    "mgrey": "#CFCECE",
+    "lgrey": "#E3E3E3",
+    "yellow": "#FEE000",
+    "myellow": "#FEE84C",
+    "lyellow": "#FEF39B",
+    "orange": "#F8991D",
+    "morange": "#FBB748",
+    "lorange": "#FED699"
+}
