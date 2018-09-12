@@ -22,11 +22,11 @@ import numpy as np
 import tensorflow as tf
 
 
-class Controlla():
+class Controller():
     def __init__(self, FLAGS):
-        # the controlla will hold the flags, the data, the session, the plotter, the model and logger
+        # the controller will hold the flags, the data, the session, the plotter, the model and logger
         self.FLAGS = FLAGS
-        self.logger = logging.getLogger('{}.controlla'.format(self.FLAGS.modelname))
+        self.logger = logging.getLogger('{}.controller'.format(self.FLAGS.modelname))
         self.logger.info('\n============================================================\n\n\n\nNew call:\n')
 
         # import the model specified in the FLAGS
@@ -73,7 +73,7 @@ class Controlla():
         self.session = tf.Session(config=config, graph=self.graph)
 
         self.logger.debug('Invoked Session. Got empty Graph.')
-        self.logger.info('Further initialized Controlla for running the model.')
+        self.logger.info('Further initialized Controller for running the model.')
 
     def train(self):
         """Start the training process for the model.
@@ -130,19 +130,8 @@ class Controlla():
                 self.eval_writer = tf.summary.FileWriter(self.FLAGS.info_path + '/tensorboard/valid')
 
                 # feed dicts:
-                if self.FLAGS.increase_loss_mask == -1:
-                    classes_to_train = self.go_info.nclasses
-                else:
-                    classes_to_train = self.FLAGS.increase_loss_mask
-
-                if self.FLAGS.increase_loss_mask != -1:
-                    train_fd = {handle: train_handle,
-                                self.model.grad_mask_width: classes_to_train}
-                    valid_fd = {handle: valid_handle,
-                                self.model.grad_mask_width: classes_to_train}
-                else:
-                    train_fd = {handle: train_handle}
-                    valid_fd = {handle: valid_handle}
+                train_fd = {handle: train_handle}
+                valid_fd = {handle: valid_handle}
 
                 # add the loss and optimizer
                 loss, f1_internal = self.model.get_loss(batch_prediction.outputs, batch_labels, valid_mode=False)
@@ -180,10 +169,6 @@ class Controlla():
 
                 for epoch in range(self.FLAGS.nepochs):
                     # train
-                    if self.FLAGS.increase_loss_mask != -1:
-                        self.logger.info('Training {} classes for the next epoch.'.format(classes_to_train))
-                        classes_to_train = min(classes_to_train + 50, self.go_info.nclasses)
-
                     self.session.run(train_init_op)
 
                     self.logger.debug('Ran train_init_op, initialized variables')
@@ -608,11 +593,7 @@ class Controlla():
                             self.dsgen.dataset.output_shapes)
 
                         str_handle = self.session.run(iterator.string_handle())
-                        if self.FLAGS.increase_loss_mask != -1:
-                            fd = {handle: str_handle,
-                                  self.model.grad_mask_width: self.go_info.nclasses}
-                        else:
-                            fd = {handle: str_handle}
+                        fd = {handle: str_handle}
 
                         # define the init_ops:
                         init_op = iterator.make_initializer(self.dsgen.dataset)
@@ -772,11 +753,7 @@ class Controlla():
     def infer(self, seq):
         # infer
         # feed dicts:
-        if self.FLAGS.increase_loss_mask != -1:
-            fd = {self.inf_seq_str: seq,
-                  self.model.grad_mask_width: self.go_info.nclasses}
-        else:
-            fd = {self.inf_seq_str: seq}
+        fd = {self.inf_seq_str: seq}
 
         predictions = self.session.run([self.inf_batch_prediction],
                                        feed_dict=fd)
@@ -963,11 +940,7 @@ class Controlla():
                 batch_samples, batch_labels = self.iterator.get_next()
                 batch_prediction = self.model.build_net(batch_samples)
 
-                if self.FLAGS.increase_loss_mask != -1:
-                    fd = {handle_ph: handle,
-                          self.model.grad_mask_width: self.FLAGS.increase_loss_mask}
-                else:
-                    fd = {handle_ph: handle}
+                fd = {handle_ph: handle}
 
                 # do the inits
                 self.session.run(init_op_once, feed_dict=fd)

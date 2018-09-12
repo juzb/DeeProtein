@@ -28,6 +28,10 @@ godag_path          = 'path/to/godag'
 prot_path           = 'path/to/pdb-files'
 
 exclude_file_path   = os.path.join(save_path, 'exclude.txt')
+if not os.path.isfile(exclude_file_path):
+    with open(exclude_file_path, 'w') as ofile:
+        pass
+
 
 
 def get_pdb_file(path, pdbid):
@@ -78,7 +82,7 @@ def get_max_no(file_path):
     return len([x for x in os.listdir(file_path) if x.endswith('.txt')])
 
 
-def read_masked_dump(file_path, filename=None):
+def read_masked_dump(file_path, filename):
     """
     Reads the information from one file, returns it in accessible format.
     :param file_path:   Path to the file
@@ -233,13 +237,21 @@ def reset_stored():
     stored.current_no_go = 0
     stored.last_pdbid = ''
 
-    stored.order = os.listdir(label_path)
+    stored.order = [f for f in os.listdir(label_path) if f.endswith('.txt')]
+
+    if len(stored.order) == 0:
+        print('No label files found.')
+        return
 
     excl = [l.strip() for l in open(exclude_file_path, 'r').readlines()]
 
     for e in excl:
         if e in stored.order:
             stored.order.remove(e)
+
+    if len(stored.order) == 0:
+        print('All files are in exclusion list. You can delete the file to reset:\nrm {}'.format(exclude_file_path))
+        return
 
     shuffle(stored.order)
 
@@ -384,6 +396,9 @@ def color_sensitivity(save_png=False, next_dp=False, file=None, category=None,
         stored.exclude_file.write(stored.current_file + '\n')
 
         print('Moving to the next datapoint.')
+
+    if len(stored.order) == 0:
+        stored.order = [f for f in os.listdir(label_path) if f.endswith('.txt')]
 
     if not category:
         category = head[no_go]

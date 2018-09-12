@@ -2,6 +2,7 @@
 DeeProtein model.
 Run it. Run it. Run it.
 """
+
 import controller as cont
 import logging
 import argparse
@@ -71,30 +72,34 @@ def main():
     # then parse the args
     FLAGS = parser.parse_args()
     logger = set_up_logger(FLAGS.info_path, FLAGS.modelname)
-    controlla = cont.Controlla(FLAGS)
+    controller = cont.Controller(FLAGS)
 
     if FLAGS.statsonly == 'True':
         logger.debug('statsonly')
-        controlla.plot(step=-1, early=False)
+        controller.plot(step=-1, early=False)
     elif FLAGS.mask == 'True':
         logger.debug('mask')
-        controlla.evaluate_masked_set(filepath=FLAGS.validdata)
-    elif FLAGS.evaluate_dms == 'True':
-        logger.debug('evaluate_dms')
-        controlla.evaluate_dms()
+        controller.evaluate_masked_set(filepath=FLAGS.validdata)
     elif FLAGS.infer == 'True':
         logger.debug('infer')
-        controlla.init_for_infer()
-        controlla.interactive_inference()
+        controller.init_for_infer()
+        controller.interactive_inference()
+    elif FLAGS.sequence:
+        logger.debug('infering single sequence')
+        controller.init_for_infer()
+        preds = controller.infer(FLAGS.sequence)
+        with open(os.path.join(FLAGS.info_path, 'results.txt'), 'w') as ofile:
+            ofile.write(preds)
+        logger.debug(preds)
     elif FLAGS.compare == 'True':
         logger.debug('compare')
-        controlla.compare()
+        controller.compare()
     elif FLAGS.test == 'True':
         logger.debug('test')
-        controlla.test()
+        controller.test()
     else:
         logger.debug('train')
-        controlla.train()
+        controller.train()
 
     logger.info('Done.')
 

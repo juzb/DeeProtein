@@ -19,19 +19,19 @@
   },
   "-gofile": {
     "short": "-g",
-    "value": "/path/to/datasets/go_file.txt",
+    "value": "/data/go_file_1000.txt",
     "help": "The file-path to the GO-file holding the classes to model should consider.",
     "type": "str"
   },
   "-info_path": {
     "short": "-ip",
-    "value": "/path/to/model_tests/",
+    "value": "/results/out",
     "help": "The path where logs and the metrics calculation related files should be saved.",
     "type": "str"
   },
   "-model_to_use": {
     "short": "-mo",
-    "value": "/path/to/DeeProtein/model/model.py",
+    "value": "/code/DeeProtein/model/model.py",
     "help": "The Network to use. The specified network needs to fit the input and output shapes.",
     "type": "str"
   },
@@ -73,7 +73,7 @@
   },
   "-godagfile": {
     "short": "-gof",
-    "value": "/path/to/gene_ontology/go.obo",
+    "value": "/data/go-basic.obo",
     "help": ".obo file holding the information on the GO-DAG. File can be downloaded from http://geneontology.org/page/download-ontology.",
     "type": "str"
   },
@@ -109,7 +109,7 @@
   },
   "-restore": {
     "short": "-r",
-    "value": "False",
+    "value": "True",
     "help": "Whether to restore a model or not. Defaults to False. If True a restorepath must be specified under the corresponding flag.",
     "type": "str"
   },
@@ -121,7 +121,7 @@
   },
   "-restorepath": {
     "short": "-rp",
-    "value": "/path/to/saves",
+    "value": "/data/saves/",
     "help": "Specifies the path from which the model is to be restored. File has to be a .npz dump.",
     "type": "str"
   },
@@ -163,20 +163,14 @@
   },
   "-print_all": {
     "short": "-pa",
-    "value": "False",
+    "value": "True",
     "help": "Enable to print all GO term scores in interactive inference",
     "type": "str"
   },
   "-hide_zeros": {
     "short": "-hz",
-    "value": "False",
+    "value": "True",
     "help": "Hides scores smaller than 0.001 in interactive inference",
-    "type": "str"
-  },
-  "-evaluate_dms": {
-    "short": "-dms",
-    "value": "False",
-    "help": "Evaluates dms dataset specified under valid path -v",
     "type": "str"
   },
   "-mask_width": {
@@ -225,6 +219,12 @@
     "short": "-pfam",
     "value": "/path/to/pfam_2",
     "help": "Path to pfam directory, containing the pfam2pdb file",
+    "type": "str"
+  },
+  "-sequence": {
+    "short": "-sq",
+    "value": "",
+    "help": "Sequence to perf",
     "type": "str"
   }
 }
