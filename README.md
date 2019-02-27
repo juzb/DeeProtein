@@ -20,7 +20,7 @@ This compute capsule includes two modes:
 * **Sensitivity analysis:** run a full sensitivity analysis for a set of GO terms for any protein sequence
 
 For both modes click *Start Interactive Session* choose *Juypter*.
-In the dropdown menu 'New' on the righthand side choose *Terminal*. 
+In the dropdown menu *New* on the righthand side choose *Terminal*. 
 
 ## Classification
 
@@ -222,10 +222,10 @@ Clone this git repository:
 ## General Information
 
 **Sensitivity data**
-Sensitivity data is stored in our [zenodo repository](https://doi.org/10.5281/zenodo.1402817).
+Sensitivity data is stored in our [zenodo repository](https://doi.org/10.5281/zenodo.1402816).
 
 **DeeProtein Weights**
-Weights for DeeProtein are stored in our [zenodo repository](https://doi.org/10.5281/zenodo.1402828).
+Weights for DeeProtein are stored in our [zenodo repository](https://doi.org/10.5281/zenodo.1402827).
 
 
 # Usage
@@ -242,9 +242,9 @@ In order to work with DeeProtein in greater detail, i.e. to alter and/or combine
 
 ## Inference with DeeProtein
 
-Download the weights for DeeProtein from our [zenodo repository](https://doi.org/10.5281/zenodo.1402828)
+Download the weights for DeeProtein from our [zenodo repository](https://doi.org/10.5281/zenodo.1402827)
 ```bash
-$ wget https://zenodo.org/record/1402828/files/complete_model_0.npz
+$ wget https://zenodo.org/record/2574979/files/complete_model_0.npz
 mv complete_model_0.npz complete_model.npz
 ```
 
