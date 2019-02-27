@@ -7,9 +7,9 @@ import logging
 import numpy as np
 import json
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-
 
 plt.style.use(json.load(open(os.path.join(sys.path[0], 'style/style.json'), 'r')))
 
@@ -17,7 +17,7 @@ with open(os.path.join(sys.path[0], 'style/colors.json'), 'r') as pickle_file:
     colors = json.load(pickle_file)
 
 
-class PrettyPlotter():
+class PrettyPlotter:
     def __init__(self, FLAGS, go_info):
         """
         PrettyPLotter needs the flags + go_info to be passed
@@ -29,7 +29,7 @@ class PrettyPlotter():
         self.detailed_plots = (self.FLAGS.detailed_plots == 'True')
         self.go_info = go_info
         self.overall_metrics = None
-        self.names  = None
+        self.names = None
         self.colors = None
         self.width = None
         self.plot_path = os.path.join(os.path.join(self.FLAGS.info_path, 'plots'))
@@ -66,7 +66,7 @@ class PrettyPlotter():
                 try:
                     _per_class_metrics_list.append(np.load(dump))
 
-                except KeyError or OSError:
+                except (KeyError, OSError):
                     self.logger.warning('Failed to load per_class_dump for '
                                         '{} with assumed file-path: {}'.format(go, dump))
 
@@ -92,10 +92,10 @@ class PrettyPlotter():
             overall_metrics_dump = os.path.join(os.path.join(path, 'metrics'), 'metrics.npy.npz')
             try:
                 self.overall_metrics.append(np.load(overall_metrics_dump))
-            except KeyError or OSError:
+            except (KeyError, OSError):
                 self.logger.warning('Failed to load overall metrics_dump '
                                     'with assumed file-path: {}'.format(overall_metrics_dump))
-        self.names  = names
+        self.names = names
         self.colors = plt_colors
         while len(self.colors) < len(self.overall_metrics):
             self.colors += self.colors
@@ -110,7 +110,6 @@ class PrettyPlotter():
         ax.plot([0, 1.0], [0, 1.0], color=colors['lblue'], lw=2, linestyle="--")
 
         for model, name, plt_color in zip(self.overall_metrics, self.names, self.colors):
-
             x = model['fpr']
             y = model['tpr']
             c = colors[plt_color]
@@ -181,39 +180,12 @@ class PrettyPlotter():
                width=1,
                color=colors['blue'],
                alpha=0.7
-              )
+               )
 
         ax.set_ylabel('F1-Score')
         ax.set_xlabel('Class')
         ax.set_title('F1-Score per class')
         plt.savefig(os.path.join(self.plot_path, 'f1_per_class_{}{}.png'.format(self.step, self.early)))
-        plt.close()
-
-    def plot_f1_per_class_scatter(self):
-        """
-        Plot the f1 per class as a scatterplot against n_samples.
-        """
-
-        fig, ax = plt.subplots()
-
-        gos = [x['GO'] for x in self.per_class_metrics_list[0]]
-        n_samples = [float(self.go_info.key2freq[str(x)]) for x in gos]
-
-        for model, name, color in zip(self.per_class_metrics_list, self.names, self.colors):
-            ax.scatter(x=n_samples,
-                       y=[x['f1'] for x in model],
-                       alpha=0.1,
-                       color=colors[color],
-                       s=4,
-                       label=name
-                       )
-        if len(self.overall_metrics) > 1:
-            plt.legend()
-        ax.set_xscale('log')
-        ax.set_ylabel('F1 Score')
-        ax.set_xlabel('Number of Samples')
-        ax.set_title('F1 against N')
-        plt.savefig(os.path.join(self.plot_path, 'f1_n_samples_{}{}.png'.format(self.step, self.early)))
         plt.close()
 
     def plot_roc_auc_per_class(self):
@@ -228,37 +200,11 @@ class PrettyPlotter():
                width=1,
                color=colors['blue'],
                alpha=0.7
-              )
+               )
         ax.set_ylabel('ROC AUC')
         ax.set_xlabel('Class')
         ax.set_title('ROC per Class')
         plt.savefig(os.path.join(self.plot_path, 'roc_auc_per_class_{}{}.png'.format(self.step, self.early)))
-        plt.close()
-
-    def plot_roc_auc_per_class_scatter(self):
-        """
-        Plot the ROC AUC per class as a scatterplot against n_samples.
-        """
-        fig, ax = plt.subplots()
-
-        gos = [x['GO'] for x in self.per_class_metrics_list[0]]
-        n_samples = [float(self.go_info.key2freq[str(x)]) for x in gos]
-
-        for model, name, color in zip(self.per_class_metrics_list, self.names, self.colors):
-            ax.scatter(x=n_samples,
-                       y=[x['ROC_auc'] for x in model],
-                       alpha=0.1,
-                       color=colors[color],
-                       s=4,
-                       label=name
-                       )
-        if len(self.overall_metrics) > 1:
-            plt.legend()
-        ax.set_xscale('log')
-        ax.set_ylabel('ROC AUC')
-        ax.set_xlabel('Number of Samples')
-        ax.set_title('ROC AUC against N')
-        plt.savefig(os.path.join(self.plot_path, 'roc_auc_n_samples_{}{}.png'.format(self.step, self.early)))
         plt.close()
 
     def plot_precision_recall_auc_per_class(self):
@@ -275,7 +221,7 @@ class PrettyPlotter():
                width=1,
                color=colors['blue'],
                alpha=0.7
-              )
+               )
         ax.set_xlabel('PR AUC')
         ax.set_ylabel('Class')
         ax.set_title('PR AUC per Class')
@@ -283,32 +229,26 @@ class PrettyPlotter():
                                                  '_auc_per_class_{}{}.png'.format(self.step, self.early)))
         plt.close()
 
-    def plot_precision_recall_auc_per_class_scatter(self):
+    def plot_fmax_per_class(self):
         """
-        Plot the precision recall AUC per class as a scatterplot against n_samples.
+        Plot the fmax per class as a barplot.
         """
+
+        self.per_class_metrics_list[0] = sorted(self.per_class_metrics_list[0], key=lambda x: -x['fmax'])
 
         fig, ax = plt.subplots()
 
-        gos = [x['GO'] for x in self.per_class_metrics_list[0]]
-        n_samples = [float(self.go_info.key2freq[str(x)]) for x in gos]
+        ax.bar(x=list(range(len(self.per_class_metrics_list[0]))),
+               height=[x['fmax'] for x in self.per_class_metrics_list[0]],
+               width=1,
+               color=colors['blue'],
+               alpha=0.7
+               )
 
-        for model, name, color in zip(self.per_class_metrics_list, self.names, self.colors):
-            ax.scatter(x=n_samples,
-                       y=[float(x['precision_recall_auc']) for x in model],
-                       alpha=0.1,
-                       color=colors[color],
-                       s=4,
-                       label=name
-                       )
-        if len(self.overall_metrics) > 1:
-            plt.legend()
-        ax.set_xscale('log')
-        ax.set_title('PR AUC against N')
-        ax.set_xlabel('Number of Samples')
-        ax.set_ylabel('PR AUC')
-        plt.savefig(os.path.join(self.plot_path, 'precision_recall_auc_'
-                                                 'n_samples_{}{}.png'.format(self.step, self.early)))
+        ax.set_ylabel('fmax-Score')
+        ax.set_xlabel('Class')
+        ax.set_title('fmax-Score per class')
+        plt.savefig(os.path.join(self.plot_path, 'fmax_per_class_{}{}.png'.format(self.step, self.early)))
         plt.close()
 
     def plot_false_negative_per_class(self):
@@ -330,32 +270,6 @@ class PrettyPlotter():
         ax.set_title('FNR per Class')
         plt.savefig(
             os.path.join(self.plot_path, 'fnr_per_class_{}{}.png'.format(self.step, self.early)))
-        plt.close()
-
-    def plot_false_negative_scatter(self):
-        """
-        Plot the precision recall AUC per class as a scatterplot against n_samples.
-        """
-        fig, ax = plt.subplots()
-
-        gos = [x['GO'] for x in self.per_class_metrics_list[0]]
-        n_samples = [float(self.go_info.key2freq[str(x)]) for x in gos]
-
-        for model, name, color in zip(self.per_class_metrics_list, self.names, self.colors):
-            ax.scatter(x=n_samples,
-                       y=[float(x['fnr']) for x in model],
-                       alpha=0.1,
-                       color=colors[color],
-                       s=4,
-                       label=name)
-        if len(self.overall_metrics) > 1:
-            plt.legend()
-        ax.set_xscale('log')
-        ax.set_title('FNR against N')
-        ax.set_ylabel('FNR')
-        ax.set_xlabel('Number of Samples')
-        plt.savefig(
-            os.path.join(self.plot_path, 'fnr_n_samples_{}{}.png'.format(self.step, self.early)))
         plt.close()
 
     def plot_all(self, step, early):
@@ -384,26 +298,16 @@ class PrettyPlotter():
         try:
             self.read_per_class_metrics()
             self.logger.debug('Finished reading per class metrics')
-
             self.plot_f1_per_class()
             self.logger.debug('Finished plot_f1_per_class')
-            self.plot_f1_per_class_scatter()
-            self.logger.debug('Finished plot_f1_per_class_scatter')
-
+            self.plot_fmax_per_class()
+            self.logger.debug('Finished plot_fmax_per_class')
             self.plot_precision_recall_auc_per_class()
             self.logger.debug('Finished plot_precision_recall_auc_per_class')
-            self.plot_precision_recall_auc_per_class_scatter()
-            self.logger.debug('Finished plot_precision_recall_auc_per_class_scatter')
-
             self.plot_roc_auc_per_class()
             self.logger.debug('Finished plot_roc_auc_per_class')
-            self.plot_roc_auc_per_class_scatter()
-            self.logger.debug('Finished plot_roc_auc_per_class_scatter')
             self.plot_false_negative_per_class()
             self.logger.debug('Finished plot_false_negative_per_class')
-            self.plot_false_negative_scatter()
-            self.logger.debug('Finished plot_false_negative_scatter')
 
         except FileNotFoundError:
             self.logger.warning('Unable to plot per class metrics.')
-

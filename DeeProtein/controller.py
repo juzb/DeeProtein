@@ -10,19 +10,19 @@ from sklearn.metrics import precision_recall_curve
 from goatools.obo_parser import GODag
 from helpers.dataset_gen import Dataset_Gen
 from helpers.helpers import *
-from helpers.helpers_cpu import *
 from helpers.prettyplotter import PrettyPlotter
 from datapreprocessing.datapreprocessing import DataPreprocessor
 import importlib.util
 import datetime
-import copy
-import pickle
-import urllib.request
 import numpy as np
 import tensorflow as tf
+import pandas as pd
 
 
-class Controller():
+class Controller:
+    """
+    Manages the model and all code to be executed around it
+    """
     def __init__(self, FLAGS):
         # the controller will hold the flags, the data, the session, the plotter, the model and logger
         self.FLAGS = FLAGS
@@ -87,7 +87,7 @@ class Controller():
 
             self.valid_dsgen = Dataset_Gen(FLAGS=self.FLAGS, go_info=self.go_info, train=False, data='seq')
 
-            handle = tf.placeholder(tf.string, shape=[]) # this is feeded whether to use valid or train dataset
+            handle = tf.placeholder(tf.string, shape=[])  # this is feeded whether to use valid or train dataset
             self.iterator = tf.data.Iterator.from_string_handle(string_handle=handle,
                                                                 output_types=self.train_dsgen.dataset.output_types,
                                                                 output_shapes=self.train_dsgen.dataset.output_shapes,
@@ -135,12 +135,11 @@ class Controller():
 
                 # add the loss and optimizer
                 loss, f1_internal = self.model.get_loss(batch_prediction.outputs, batch_labels, valid_mode=False)
-                train_params = batch_prediction.all_params #this means train everything!!
-
+                train_params = batch_prediction.all_params
                 optimizer = self.model.get_opt(loss, global_step=global_step, lr_decay=False, adam=True,
                                                vars=train_params)
 
-                #merge the summaries:
+                # merge the summaries:
                 summaries = tf.summary.merge_all()
 
                 # do the inits
@@ -186,7 +185,7 @@ class Controller():
                             if step % 100 == 0:
                                 self.logger.debug('T - Epoch {}, Batch {} done.'.format(epoch, step))
 
-                            if step % self.FLAGS.valid_after == 0: # Validation during epoch: Shorter
+                            if step % self.FLAGS.valid_after == 0:  # Validation during epoch: Shorter
                                 self.logger.debug('Valid during one epoch')
                                 f1_collection = []
                                 validation_predictions = []
@@ -204,19 +203,19 @@ class Controller():
                                         valid_step += 1
                                         max_valid_batches -= 1
                                         summary, f1, predicted_labels, labels = self.session.run([summaries,
-                                                                                               f1_internal,
-                                                                                               batch_prediction.outputs,
-                                                                                               batch_labels],
-                                                                                               feed_dict=valid_fd)
+                                                                                                  f1_internal,
+                                                                                                  batch_prediction.outputs,
+                                                                                                  batch_labels],
+                                                                                                 feed_dict=valid_fd)
                                         # log the stuff for tensorboard
                                         self.eval_writer.add_summary(summary, valid_step)
                                         validation_predictions.append(predicted_labels)
                                         predicted_labels = np.greater(predicted_labels, 0.5)
                                         validation_labels.append(labels)
                                         true_positives.append(np.asarray(validation_labels)[0, :, :]
-                                                             *np.asarray(predicted_labels)[:, :, 0])
-                                        true_negatives.append((1-np.asarray(validation_labels)[0, :, :])
-                                                             *(1-np.asarray(predicted_labels)[:, :, 0]))
+                                                              * np.asarray(predicted_labels)[:, :, 0])
+                                        true_negatives.append((1 - np.asarray(validation_labels)[0, :, :])
+                                                              * (1 - np.asarray(predicted_labels)[:, :, 0]))
 
                                         f1_collection.append(f1)
                                         if max_valid_batches == 0:
@@ -225,13 +224,14 @@ class Controller():
 
                                     except tf.errors.OutOfRangeError:
                                         accuracy = float((np.sum(true_positives) +
-                                                          np.sum(true_negatives))/np.size(true_positives))
+                                                          np.sum(true_negatives)) / np.size(true_positives))
                                         self.logger.info('Epoch {}/{}: Finished validation during epoch with avg.'
                                                          'F1-Score: {} on {} batches'.format(epoch + 1,
-                                                                               self.FLAGS.nepochs,
-                                                                               float(np.mean(np.asarray(f1_collection),
-                                                                                             keepdims=False)),
-                                                                               len(f1_collection)))
+                                                                                             self.FLAGS.nepochs,
+                                                                                             float(np.mean(np.asarray(
+                                                                                                 f1_collection),
+                                                                                                 keepdims=False)),
+                                                                                             len(f1_collection)))
                                         self.logger.info('Epoch {} finished with accuracy: {}'.format(epoch, accuracy))
                                         break
 
@@ -249,7 +249,7 @@ class Controller():
                                 self.logger.info('Performed the validation, closing now.')
                                 return
                         except tf.errors.OutOfRangeError:
-                            self.logger.info('Epoch {}/{}: Finished training.'.format(epoch+1, self.FLAGS.nepochs))
+                            self.logger.info('Epoch {}/{}: Finished training.'.format(epoch + 1, self.FLAGS.nepochs))
                             break  # we are done with the epoch
 
                     # validation
@@ -268,16 +268,16 @@ class Controller():
                             if valid_step % 100 == 0:
                                 self.logger.debug('V - Epoch {}, Batch {} done.'.format(epoch, valid_step))
                             valid_step += 1
-                            summary, f1, predicted_labels, labels = self.session.run([summaries,
-                                                                                      f1_internal,
-                                                                                      batch_prediction.outputs,
-                                                                                      batch_labels],
-                                                                                      feed_dict=valid_fd)
+                            _, summary, f1, predicted_labels, labels = self.session.run([global_step,
+                                                                                         summaries,
+                                                                                         f1_internal,
+                                                                                         batch_prediction.outputs,
+                                                                                         batch_labels],
+                                                                                        feed_dict=valid_fd)
 
                             # log the stuff for tensorboard
                             self.eval_writer.add_summary(summary, valid_step)
                             validation_predictions.append(predicted_labels)
-
                             predicted_labels = np.greater(predicted_labels, 0.5)
                             validation_labels.append(labels)
                             true_positives.append(np.asarray(validation_labels)[0, :, :]
@@ -288,35 +288,43 @@ class Controller():
                             f1_collection.append(f1)
 
                         except tf.errors.OutOfRangeError:
-                            # assert len(validation_predictions) == self.FLAGS.valid_size # This flag does not exist
+                            self.logger.debug('Out of range: Valid done.')
                             accuracy = float((np.sum(true_positives)
                                               + np.sum(true_negatives)) / np.size(true_positives))
                             self.logger.info('Epoch {}/{}: Finished validation during epoch with avg.'
                                              'F1-Score: {} on {} batches'.format(epoch + 1,
-                                                                          self.FLAGS.nepochs,
-                                                                          float(np.mean(np.asarray(f1_collection),
-                                                                                        keepdims=False)),
-                                                                          len(f1_collection)))
+                                                                                 self.FLAGS.nepochs,
+                                                                                 float(
+                                                                                     np.mean(np.asarray(f1_collection),
+                                                                                             keepdims=False)),
+                                                                                 len(f1_collection)))
+
                             self.logger.info('Epoch {} finished with accuracy: {}'.format(epoch, accuracy))
                             break
 
                     validation_predictions = np.concatenate(validation_predictions, axis=0)
+                    self.logger.debug('Concatenated predictions')
                     validation_labels = np.concatenate(validation_labels, axis=0)
+                    self.logger.debug('Concatenated labels')
                     self.write_predictions(validation_predictions, validation_labels)
+                    self.logger.debug('Wrote predicitions')
 
                     self.get_metrics()
+                    self.logger.debug('Got metrics')
                     self.plot(step=valid_step, early=False)
+                    self.logger.debug('Plotted.')
 
                     # save model
                     self.model.save(network=batch_prediction, session=self.session, step=global_step)
+                    self.logger.debug('Saved model.')
 
                 self.logger.info('Finished training. {} epochs in {}.'.format(self.FLAGS.nepochs,
                                                                               str(time.time() - starting_time)))
 
     def plot(self, step, early):
         """
-        initialize a PrettyPlotter().
-        do plots
+        Initialize a PrettyPlotter instance and do all plots
+        :param step: I
         :return:
         """
 
@@ -325,7 +333,7 @@ class Controller():
             os.makedirs(os.path.join(self.FLAGS.info_path, 'plots'), exist_ok=True)
 
         self.pp.plot_all(step, early)
-        self.logger.info('Plottet metrics plots.')
+        self.logger.info('Plotted metrics plots.')
 
     def write_predictions(self, predictions, labels):
         """
@@ -337,7 +345,6 @@ class Controller():
 
         prediction_dump = os.path.join(os.path.join(self.FLAGS.info_path, 'metrics'), 'raw_predictions.npy')
         labels_dump = os.path.join(os.path.join(self.FLAGS.info_path, 'metrics'), 'raw_labels.npy')
-
         # dump as np arrays:
         np.save(prediction_dump, predictions)
         np.save(labels_dump, labels)
@@ -345,11 +352,13 @@ class Controller():
 
     def get_metrics(self):
         """
-        Calculate some metrics on a written out.csv
+        Reads predictions back from disk and calculates the most important metrics.
+        Writes them to metrics.npz
+        :return:
         """
 
-        softmax_outlayer = True # set to false when using sigmoid outlayer
-        detailed_plots = (self.FLAGS.detailed_plots == 'True')
+        softmax_outlayer = True  # set to false when using sigmoid outlayer
+        detailed_plots = (self.FLAGS.detailed_plots.lower() == 'true')
 
         self.logger.info('Calculating Metrics.')
         prediction_dump = os.path.join(os.path.join(self.FLAGS.info_path, 'metrics'), 'raw_predictions.npy')
@@ -383,17 +392,19 @@ class Controller():
                 class_predictions = predictions[:, i, 0]
             else:
                 class_predictions = predictions[:, i]
-
             # now get the ROC:
-            class_fpr_arr, class_tpr_arr, class_roc_thresholds = roc_curve(
+            class_fpr_arr, class_tpr_arr, _ = roc_curve(
                 y_true=np.reshape(class_labels, (-1)),
                 y_score=np.reshape(class_predictions, (-1)))
             class_roc_auc = float(auc(class_fpr_arr, class_tpr_arr))
 
             # precision/recall curve:
-            class_precision_arr, class_recall_arr, thresholds = precision_recall_curve(
+            class_precision_arr, class_recall_arr, _ = precision_recall_curve(
                 y_true=np.reshape(class_labels, (-1)), probas_pred=np.reshape(class_predictions, (-1)))
             class_precision_recall_auc = float(auc(class_recall_arr, class_precision_arr))
+
+            # Term wise Fmax score
+            class_fmax = (2 * class_precision_arr * class_recall_arr / (class_precision_arr + class_recall_arr)).max()
 
             # F1-Score
             class_positive_predictions = np.greater(class_predictions, 0.5)
@@ -403,12 +414,12 @@ class Controller():
             class_tp_predictions = np.sum(np.multiply(class_positive_predictions, class_labels))
             class_precision = np.sum(class_tp_predictions) / np.sum(class_positive_predictions)
             class_recall = np.sum(class_tp_predictions) / np.sum(class_labels)
-            class_false_negatives = np.sum(np.multiply(class_labels, (1-class_positive_predictions)))
+            class_false_negatives = np.sum(np.multiply(class_labels, (1 - class_positive_predictions)))
             fnr = class_false_negatives / np.sum(class_labels)
 
             try:
                 assert np.sum(class_positive_predictions) > 0
-                class_f1_hand = float(2*class_precision*class_recall / (class_precision + class_recall))
+                class_f1_hand = float(2 * class_precision * class_recall / (class_precision + class_recall))
 
             except AssertionError:
                 no_f1.append(self.go_info.id2key[i])
@@ -416,13 +427,14 @@ class Controller():
 
             # store them in the class_metrics_dict
             per_class_metric = {}
-            per_class_metric['n_samples'] = float(np.sum(class_labels)) # these are the valid samples!
+            per_class_metric['n_samples'] = float(np.sum(class_labels))  # these are the valid samples!
             per_class_metric['tp_predictions'] = class_tp_predictions if not np.isnan(class_tp_predictions) else 0.0
             per_class_metric['ROC_auc'] = class_roc_auc if not np.isnan(class_roc_auc) else 0.0
             per_class_metric['precision'] = class_precision if not np.isnan(class_precision) else 0.0
             per_class_metric['recall'] = class_recall if not np.isnan(class_recall) else 0.0
             per_class_metric['fnr'] = fnr if not np.isnan(fnr) else 1.0
             per_class_metric['f1'] = class_f1_hand if not np.isnan(class_f1_hand) else 0.0
+            per_class_metric['fmax'] = class_fmax if not np.isnan(class_fmax) else 0.0
             per_class_metric['id'] = i
             per_class_metric['GO'] = self.go_info.id2key[i]
             per_class_metric['precision_recall_auc'] = float(class_precision_recall_auc) \
@@ -465,6 +477,8 @@ class Controller():
                                                                        probas_pred=np.ravel(predictions))
         precision_recall_auc = auc(recall_arr, precision_arr)
 
+        fmax = (2 * precision_arr * recall_arr / (precision_arr + recall_arr)).max()
+
         # dump this as .npy files:
         overall_metrics_dump = os.path.join(os.path.join(self.FLAGS.info_path, 'metrics'), 'metrics.npy')
         save_var_dict = {'fpr': fpr,
@@ -472,15 +486,17 @@ class Controller():
                          'roc_auc': roc_auc,
                          'precision_arr': precision_arr,
                          'recall_arr': recall_arr,
-                         'precision_recall_auc': precision_recall_auc}
+                         'precision_recall_auc': precision_recall_auc,
+                         'fmax': fmax}
         np.savez(overall_metrics_dump, **save_var_dict)
         self.logger.info('Done with over-all metrics. Dump saved in npz_dict {}'.format(overall_metrics_dump))
 
     def evaluate_masked_set(self, filepath=None):
-        """Start the evaluation of all masks.
+        """
+        Runs the model for occlusion based sensitivity analysis on sequences with masking
         Needs the sequence in a .txt specified in the valid path -v.
         """
-        assert self.FLAGS.batchsize == 1 # Otherwise the last positions won't be evaluated
+        assert self.FLAGS.batchsize == 1  # Otherwise the last positions won't be evaluated
         os.makedirs(os.path.join(self.FLAGS.info_path, 'metrics/all_diffs'), exist_ok=True)
         os.makedirs(os.path.join(self.FLAGS.info_path, 'aa_resolution'), exist_ok=True)
         os.makedirs(os.path.join(self.FLAGS.info_path, 'metrics/seqs/'), exist_ok=True)
@@ -491,9 +507,9 @@ class Controller():
         self.initialize()
         self.pp = PrettyPlotter(self.FLAGS, self.go_info)
         if filepath:
-            p = os.path.join(filepath, 'masked_dataset.txt')
+            p = filepath
         else:
-            p = os.path.join(self.FLAGS.validdata, 'masked_dataset.txt')
+            p = self.FLAGS.validdata
         # Invoke the dataset generators and the preprocessing pipeline:
         seqs = []
         ids = []
@@ -511,6 +527,8 @@ class Controller():
                     seqs.append(cont[3] + ';' + cont[2])
                     secs.append(cont[4])
                     dis.append(cont[5])
+                else:
+                    self.logger.debug('Problem with line: [{}]'.format(line.strip()))
 
         num_datapoint = self.FLAGS.num_datapoint_offset
 
@@ -548,6 +566,8 @@ class Controller():
 
                 # load the model
                 batch_prediction = self.model.load_model_weights(batch_prediction, self.session)
+                batch_prediction = batch_prediction.outputs
+
                 for n_seq in range(len(seqs)):
 
                     all_predictions = {}
@@ -560,154 +580,140 @@ class Controller():
                     class_ints = None
 
                     mw = self.FLAGS.mask_width
-                    if True:
-                        if os.path.exists(os.path.join(self.FLAGS.info_path,
-                                                       'metrics/all_diffs/all_diffs_{}_{}_{}.npy'.format(ids[n_seq],
-                                                                                                 chains[n_seq],
-                                                                                                 mw))):
-                            self.logger.info(
-                                'Entry with ID {} {} was already evaluated for mw {} '
-                                'in this information directory.'.format(
-                                    ids[n_seq], chains[n_seq], mw))
-                            continue
-                        self.logger.debug('Evaluation of {} {} with mask width {} now '
-                                          '(Entry {} of {}, {:.1f} %).'.format(
-                            ids[n_seq],
-                            chains[n_seq],
-                            mw,
-                            n_seq,
-                            len(range(int(self.FLAGS.mask_width / 2)))*len(ids),
-                            (100*n_seq/len(ids))
-                        ))
 
-                        # New Dataset generator with everything:
-                        self.dsgen = Dataset_Gen(FLAGS=self.FLAGS,
-                                                 go_info=self.go_info,
-                                                 train=False,
-                                                 data='mask',
-                                                 mask_width=mw,
-                                                 seq=seqs[n_seq])
+                    out_path = os.path.join(self.FLAGS.info_path,
+                                            'aa_resolution/masked_{}_{}_{}.txt'.format(ids[n_seq],
+                                                                                       chains[n_seq],
+                                                                                       mw))
+                    if os.path.exists(out_path):
+                        self.logger.info(
+                            'Entry with ID {} {} was already evaluated for mw {} '
+                            'in this information directory.'.format(
+                                ids[n_seq], chains[n_seq], mw))
+                        continue
+                    self.logger.debug('Evaluation of {} {} with mask width {} now '
+                                      '(Entry {} of {}, {:.1f} %).'.format(
+                        ids[n_seq],
+                        chains[n_seq],
+                        mw,
+                        n_seq,
+                        len(range(int(self.FLAGS.mask_width / 2))) * len(ids),
+                        (100 * n_seq / len(ids))
+                    ))
 
-                        iterator = tf.data.Iterator.from_structure(
-                            self.dsgen.dataset.output_types,
-                            self.dsgen.dataset.output_shapes)
+                    # New Dataset generator with everything:
+                    self.dsgen = Dataset_Gen(FLAGS=self.FLAGS,
+                                             go_info=self.go_info,
+                                             train=False,
+                                             data='mask',
+                                             mask_width=mw,
+                                             seq=seqs[n_seq])
 
-                        str_handle = self.session.run(iterator.string_handle())
-                        fd = {handle: str_handle}
+                    iterator = tf.data.Iterator.from_structure(
+                        self.dsgen.dataset.output_types,
+                        self.dsgen.dataset.output_shapes)
 
-                        # define the init_ops:
-                        init_op = iterator.make_initializer(self.dsgen.dataset)
-                        init_op_once = tf.group(self.dsgen.table_aa2id.init,
-                                                self.dsgen.table_go2id.init)
-                        self.session.run(init_op_once)
-                        self.session.run(init_op)
-                        seq_str = self.dsgen.wt_seq_str
+                    str_handle = self.session.run(iterator.string_handle())
+                    fd = {handle: str_handle}
 
-                        if not class_ints:
-                            class_ints = []
-                            temp = gos[n_seq]
-                            gos[n_seq] = []
-                            for ten, go in zip(self.dsgen.label, temp):
-                                cl_int = ten.eval(session=self.session)
-                                if cl_int != -1 and go in self.go_info.GOs:
-                                    class_ints.append(cl_int)
-                                    gos[n_seq].append(go)
+                    # define the init_ops:
+                    init_op = iterator.make_initializer(self.dsgen.dataset)
+                    init_op_once = tf.group(self.dsgen.table_aa2id.init,
+                                            self.dsgen.table_go2id.init)
+                    self.session.run(init_op_once)
+                    self.session.run(init_op)
+                    seq_str = self.dsgen.wt_seq_str
 
-                        if len(class_ints) == 0:
-                            self.logger.warning('No GO terms found that can be evaluated for '
-                                                '{} {}.'.format(ids[n_seq], chains[n_seq]))
-                            continue
+                    if not class_ints:
+                        class_ints = list(set(self.dsgen.label.eval(session=self.session)))
+                        if -1 in class_ints:
+                            class_ints.remove(-1)
+                        gos = [self.dsgen.dict_go2id[ci] for ci in class_ints]
 
-                        with open(os.path.join(os.path.join(self.FLAGS.info_path, 'metrics'),
-                                               'seqs/wt_seq_{}_{}.txt'.format(ids[n_seq], chains[n_seq])),
-                                  'w') as ofile:
-                            ofile.write(seq_str)
+                        assert (len(gos) == len(class_ints))
 
-                        all_predictions[mw] = []
-                        all_positions[mw] = []
-                        count = 0
-                        while True:
+                    if len(class_ints) == 0:
+                        self.logger.warning('No GO terms found that can be evaluated for '
+                                            '{} {}.'.format(ids[n_seq], chains[n_seq]))
+                        continue
+
+                    with open(os.path.join(os.path.join(self.FLAGS.info_path, 'metrics'),
+                                           'seqs/wt_seq_{}_{}.txt'.format(ids[n_seq], chains[n_seq])),
+                              'w') as ofile:
+                        ofile.write(seq_str)
+
+                    all_predictions[mw] = []
+                    all_positions[mw] = []
+                    count = 0
+                    while True:
+                        try:
+                            # predictions, labels = self.session.run([batch_prediction.outputs,
+                            predictions, labels = self.session.run([batch_prediction,
+                                                                    batch_labels],
+                                                                   feed_dict=fd)
+
+                            all_predictions[mw].append(predictions)
+                            all_positions[mw].append(labels)
+                            count += 1
+
+                        except tf.errors.OutOfRangeError:
+                            break
+                    self.logger.debug('Evaluated {} different input sequences.'.format(count))
+
+                    # evaluate:
+                    all_positions[mw] = np.asarray(all_positions[mw])
+                    all_positions[mw] = np.concatenate(all_positions[mw], axis=0)
+
+                    all_predictions[mw] = np.asarray(all_predictions[mw])
+                    all_predictions[mw] = np.concatenate(all_predictions[mw], axis=0)
+
+                    rel_predictions[mw] = []
+                    rel_diffs[mw] = []
+                    mean[mw] = []
+                    stdev[mw] = []
+                    all_diffs[mw] = []
+                    print(all_predictions[mw].shape)
+
+                    with open(out_path, 'w') as ofile:
+                        gos = [go + n_p for go in gos for n_p in ['_+', '_-']]
+
+                        ofile.write('Pos\tAA\tsec\tdis\t{}\n'.format('\t'.join(gos)))
+
+                        seq_chars = [c for c in seq_str]
+                        sec_chars = [c for c in secs[n_seq]]
+                        dis_chars = [c for c in dis[n_seq]]
+
+                        wt_preds = []
+                        for c in class_ints:
+                            for n_p in range(2):
+                                wt_preds.append(str(all_predictions[mw][0, c, n_p]))
+
+                        ofile.write('-1\twt\twt\twt\t{}\n'.format('\t'.join(wt_preds)))
+                        for i in range(len(seq_str)):
+                            content = [str(all_positions[mw][i + 1])]
+                            content.append(seq_chars[i])
                             try:
-                                predictions, labels = self.session.run([batch_prediction.outputs,
-                                                                        batch_labels],
-                                                                       feed_dict=fd)
-                                all_predictions[mw].append(predictions)
-                                all_positions[mw].append(labels)
-                                count += 1
-
-                            except tf.errors.OutOfRangeError:
-                                break
+                                content.append(sec_chars[i])
                             except:
-                                self.logger.debug('InvalidArgumentError, probably seq of wrong shape')
-                                break
-                        self.logger.debug('Evaluated {} different input sequences.'.format(count))
+                                content.append(' ')
+                            try:
+                                content.append(dis_chars[i])
+                            except:
+                                content.append(' ')
 
-                        # evaluate:
-                        all_positions[mw] = np.asarray(all_positions[mw])
-                        all_positions[mw] = np.concatenate(all_positions[mw], axis=0)
+                            # starting gos here:
+                            for c in class_ints:
+                                for n_p in range(2):
+                                    content.append(str(all_predictions[mw][i + 1, c, n_p]))
 
-                        all_predictions[mw] = np.asarray(all_predictions[mw])
-                        all_predictions[mw] = np.concatenate(all_predictions[mw], axis=0)
+                            ofile.write('{}\n'.format('\t'.join(content)))
+                    num_datapoint += 1
 
-                        rel_predictions[mw] = []
-                        rel_diffs[mw] = []
-                        mean[mw] = []
-                        stdev[mw] = []
-                        all_diffs[mw] = []
-
-                        for class_int in class_ints:
-                            rel_predictions[mw].append(all_predictions[mw][:, class_int, 0])
-                            mean[mw].append(np.mean(rel_predictions[mw]))
-                            stdev[mw].append(np.std(rel_predictions[mw]))
-
-                        with open(os.path.join(self.FLAGS.info_path,
-                                               'aa_resolution/masked_{}_{}_{}.txt'.format(ids[n_seq],
-                                                                                          chains[n_seq],
-                                                                                          mw)), 'w') as ofile:
-                            ofile.write('Pos\tAA\tsec\tdis\t{}\n'.format('\t'.join(gos[n_seq])))
-
-                            seq_chars = ['wt'] + [c for c in seq_str]
-                            sec_chars = ['wt'] + [c for c in secs[n_seq]]
-                            dis_chars = ['wt'] + [c for c in dis[n_seq]]
-                            rel_diffs[mw] = copy.deepcopy(rel_predictions[mw])
-
-                            for i in range(len(rel_diffs[mw][0])):
-                                for x in range(len(class_ints)):
-                                    rel_diffs[mw][x][i] = rel_diffs[mw][x][i] - rel_predictions[mw][x][0]
-
-                                content = [str(all_positions[mw][i])]
-
-                                content.append(seq_chars[i])
-                                try:
-                                    content.append(sec_chars[i])
-                                except:
-                                    content.append(' ')
-                                try:
-                                    content.append(dis_chars[i])
-                                except:
-                                    content.append(' ')
-
-                                content += [str(rel_diffs[mw][x][i]) for x in range(len(class_ints))]
-
-                                ofile.write('{}\n'.format('\t'.join(content)))
-                        num_datapoint += 1
-
-                    data = {'single':
-                                {'all_diffs': rel_diffs,
-                                 'name': '',
-                                 'color': 'blue'}
-                            }
-
-                    all_diffs_dump = os.path.join(self.FLAGS.info_path,
-                                                  'metrics/all_diffs/'
-                                                  'all_diffs_{}_{}_{}.npy'.format(ids[n_seq], chains[n_seq], mw))
-                    np.save(all_diffs_dump, all_diffs)
         self.logger.info('Done.\n\n\n')
 
     def init_for_infer(self):
-        """Start the evaluation of all masks.
-
-        Needs the sequence in a .txt specified in the valid path -v.
+        """
+        Initializes the state of the controller for inference
         """
         assert self.FLAGS.batchsize == 1
         self.initialize()
@@ -721,7 +727,7 @@ class Controller():
                 # ^this assumes CUDA_VISIBLE_DEVICES is used so that just one gpu is visible
                 self.dsgen_for_translation = Dataset_Gen(FLAGS=self.FLAGS, go_info=self.go_info)
                 init_op = tf.group(self.dsgen_for_translation.table_aa2id.init,
-                         self.dsgen_for_translation.table_go2id.init)
+                                   self.dsgen_for_translation.table_go2id.init)
                 self.inf_seq_str = tf.placeholder(tf.string, [])
                 seq_str = tf.expand_dims(self.inf_seq_str, 0)
                 seq_ten = tf.sparse_tensor_to_dense(tf.string_split(seq_str, ''), '', name='seq_as_str')
@@ -751,10 +757,13 @@ class Controller():
                 self.GODag = None
 
     def infer(self, seq):
-        # infer
+        """
+        Run inference on a single sequence
+        :param seq: Sequence as a string in one-letter code
+        :return: Formatted output
+        """
         # feed dicts:
         fd = {self.inf_seq_str: seq}
-
         predictions = self.session.run([self.inf_batch_prediction],
                                        feed_dict=fd)
 
@@ -780,7 +789,7 @@ class Controller():
             except AttributeError:
                 names.append('')
             if first and predictions[0, 0, pred_int, 0] < 0.5:
-                output += 50*'-' + '\n'
+                output += 50 * '-' + '\n'
                 first = False
             if self.FLAGS.hide_zeros == 'True':
                 if '{:.3f}'.format(predictions[0, 0, pred_int, 0]) == '0.000':
@@ -790,6 +799,10 @@ class Controller():
         return output
 
     def interactive_inference(self):
+        """
+        Runs interactive inference mode on CLI
+        :return:
+        """
         print('\n' * 50)
         print('Close Inference mode with CTRL+C.\n\nScores below 0.5 are interpreted as negative predictions.\n\n')
         self.protocol = open(os.path.join(self.FLAGS.info_path, 'inference_protocol.txt'), 'a')
@@ -808,101 +821,18 @@ class Controller():
             self.protocol.flush()
 
     def prlog(self, content):
+        """
+        Writes content from the interactive inference mode to the protocol file (SIDE EFFECT) and to STDOUT
+        :param content:
+        :return:
+        """
         self.protocol.write('{}\n'.format(content))
         print(content)
 
-    def relevant_tensor(self, tensor):
-        # takes tensor as np.array
-        out = []
-        for go_int in self.go_ints:
-            out.append(tensor[:, go_int, 0])
-
-        return np.stack(out, axis=-1)
-
-    def compare(self):
-        if not self.pp:
-            self.pp = PrettyPlotter(self.FLAGS, self.go_info)
-        self.pp.step = ''
-        self.pp.early = 'comparison'
-
-        paths  = self.FLAGS.validdata.strip().split(',')
-        names  = self.FLAGS.modelname.strip().split(',')
-        colors = self.FLAGS.pltcolors.strip().split(',')
-
-        masked_dump_path = os.path.join(paths[0], 'masked_dump.txt')
-        self.logger.debug('masked_dump_path for ids: {}'.format(masked_dump_path))
-        if os.path.exists(masked_dump_path):
-            self.logger.info('Comparing masked datasets')
-            ids = []
-            with open(masked_dump_path, 'r') as ifile:
-                for line in ifile:
-                    if line.startswith('>'):
-                        id_c = line.strip('>').split(';')[0]
-                        chain = line.strip('>').split(';')[1]
-                        if id_c not in ids:
-                            ids.append(id_c)
-
-            for id in ids:
-                comp_diffs = []
-                with open(os.path.join(paths[0], 'metrics/seqs/wt_seq_{}_{}.txt'.format(id, chain))) as ifile:
-                    wt_seq = ifile.read().strip()
-
-                data = {}
-                all_diffs = None
-                for path, name, color in zip(paths, names, colors):
-                    self.logger.debug('Loading {} for comparison'.format(path))
-                    all_diffs = np.load(os.path.join(path, 'metrics/all_diffs/all_diffs_{}.npy'.format(id))).item()
-                    data[name] = {'name':       name,
-                                  'path':       path,
-                                  'color':      color,
-                                  'all_diffs':  all_diffs}
-                    comp_diffs.append(all_diffs)
-
-                # multiple masked
-                mean_diffs, stdv_diffs = self.mean_all_diffs(comp_diffs)
-                data = {'Mean:': {'name': 'Mean',
-                                  'path': '',
-                                  'color': 'blue',
-                                  'all_diffs': mean_diffs}
-                        }
-
-                for mw in range(len(mean_diffs)):
-                    mw = (2*mw)+1
-                    with open(os.path.join(self.FLAGS.info_path, 'masked_dump_means_stds.txt'), 'a') as ofile:
-                            ofile.write('>{};{}\n'.format(id, mw))
-                            ofile.write('Mean score: {:.3f}, stdev: {:.3f}\n!\n'
-                                        ''.format(np.mean(mean_diffs[mw]), np.std(mean_diffs[mw])))
-                            ofile.write('Pos\tAA\tMean\tStdev\n')
-                            for i in range(len(wt_seq)):
-                                ofile.write('{}\t{}\t{}\t{}\n'.format(i,
-                                                                      wt_seq[i],
-                                                                      mean_diffs[mw][i],
-                                                                      stdv_diffs[mw][-1]))
-
-                all_diffs_dump = os.path.join(self.FLAGS.info_path, 'metrics/all_diffs/all_diffs_{}.npy'.format(id))
-                np.save(all_diffs_dump, mean_diffs)
-
-                # multiple masked
-                self.logger.debug('Finished id {}.'.format(id))
-
-        # over_all_metrics
-        if os.path.exists(os.path.join(os.path.join(paths[0], 'metrics'), 'metrics.npy.npz')):
-
-            self.logger.info('Comparing overall and per class metrics')
-            self.pp.read_over_all_metrics(paths=paths, plt_colors=colors, names=names)
-            self.pp.plot_ROC()
-            self.pp.plot_precision_recall()
-
-            self.pp.read_per_class_metrics(paths=paths, plt_colors=colors, names=names)
-            self.pp.plot_f1_per_class_scatter()
-            self.pp.plot_roc_auc_per_class_scatter()
-            self.pp.plot_false_negative_scatter()
-            self.pp.plot_precision_recall_auc_per_class_scatter()
-
     def eval_test(self):
-        """Start the training process for the model.
-
-        Runs training and validation ops with preferences specified in the config.JSON.
+        """
+        Runs all the tf model components necessary for model evaluation on a test set
+        :return:
         """
         self.initialize()
         os.makedirs(os.path.join(self.FLAGS.info_path, 'metrics'), exist_ok=True)
@@ -911,7 +841,7 @@ class Controller():
             # Invoke the dataset generators and the preprocessing pipeline:
             self.dsgen = Dataset_Gen(FLAGS=self.FLAGS, go_info=self.go_info, train=False, data='seq')
 
-            handle_ph = tf.placeholder(tf.string, shape=[]) # this is feeded whether to use valid or train dataset
+            handle_ph = tf.placeholder(tf.string, shape=[])  # this is feeded whether to use valid or train dataset
             self.iterator = tf.data.Iterator.from_string_handle(string_handle=handle_ph,
                                                                 output_types=self.dsgen.dataset.output_types,
                                                                 output_shapes=self.dsgen.dataset.output_shapes,
@@ -923,7 +853,7 @@ class Controller():
             # define the init_ops:
             init_op = iterator.make_initializer(self.dsgen.dataset)
             init_op_once = tf.group(self.dsgen.table_aa2id.init,
-                                          self.dsgen.table_go2id.init)
+                                    self.dsgen.table_go2id.init)
 
             handle = self.session.run(iterator.string_handle())
 
@@ -938,6 +868,7 @@ class Controller():
 
                 # define the model
                 batch_samples, batch_labels = self.iterator.get_next()
+                batch_ids = batch_samples['id']
                 batch_prediction = self.model.build_net(batch_samples)
 
                 fd = {handle_ph: handle}
@@ -948,18 +879,22 @@ class Controller():
                 self.logger.debug('Initialized Variables.')
                 # restore model if wanted
 
-                batch_prediction = self.model.load_model_weights(batch_prediction, self.session)
+                model = self.model.load_model_weights(batch_prediction, self.session)
 
-                params = batch_prediction.all_params
+                softmax_logits = tf.nn.softmax(model.outputs, dim=2, name='logits')  # [Batch, classes, Pos-Neg]
+                softmax_logits = tf.reshape(softmax_logits,
+                                            [self.FLAGS.batchsize, self.go_info.nclasses, 2],
+                                            name='softmax2predictions')
+
                 self.logger.debug('Total number of trainable Variables: {}'
-                                  .format(len(batch_prediction.all_params)))
+                                  .format(len(model.all_params)))
 
                 if self.FLAGS.print_num_params == 'True':
                     self.logger.debug('Total number of trainable parameters: {:,}'.
                                       format(sum([tf.size(x).eval(session=self.session)
-                                                  for x in batch_prediction.all_params]
+                                                  for x in model.all_params]
                                                  )))
-                #start evaluation
+                # start evaluation
                 self.logger.info('Starting evaluation')
                 starting_time = time.time()
 
@@ -973,16 +908,18 @@ class Controller():
                 validation_labels = []
                 true_positives = []
                 true_negatives = []
+                validation_ids = []
 
                 step = 0
                 while True:
                     try:
                         if step % 100 == 0:
-                            self.logger.debug('T - Batch {} done.'.format(step))
+                            self.logger.debug('E - Batch {} done.'.format(step))
                         step += 1
-                        predicted_labels, labels = self.session.run([batch_prediction.outputs,
-                                                                      batch_labels],
-                                                                      feed_dict=fd)
+                        predicted_labels, labels, ids = self.session.run([softmax_logits,  # batch_prediction.outputs,
+                                                                          batch_labels,
+                                                                          batch_ids],
+                                                                         feed_dict=fd)
 
                         validation_predictions.append(predicted_labels)
 
@@ -992,6 +929,7 @@ class Controller():
                                               * np.asarray(predicted_labels)[:, :, 0])
                         true_negatives.append((1 - np.asarray(validation_labels)[0, :, :])
                                               * (1 - np.asarray(predicted_labels)[:, :, 0]))
+                        validation_ids.append(ids)
 
                     except tf.errors.OutOfRangeError:
                         break
@@ -1003,263 +941,25 @@ class Controller():
                 # write the validation metrics to a metrics.csv clean the collectors
                 validation_predictions = np.concatenate(validation_predictions, axis=0)
                 validation_labels = np.concatenate(validation_labels, axis=0)
-                self.write_predictions(validation_predictions, validation_labels)
+                validation_ids = np.concatenate(validation_ids, axis=0)
+                self.write_predictions(validation_predictions, validation_labels, validation_ids)
 
             self.logger.info('Finished evaluation in {}.'.format(str(time.time() - starting_time)))
 
-    def count_dataset(self):
-        ret = {}
-        go_counts = {}
-        self.logger.info('Counting dataset {}'.format(self.FLAGS.traindata))
-        with open(self.FLAGS.traindata, 'r') as ifile:
-            for line in ifile:
-                line_content = line.strip().split(';')
-                id = line_content[0]
-                org = id.split('_')[1]
-                seq = line_content[1]
-                gos = line_content[2].strip().split(',')
-                for go in gos:
-                    try:
-                        ret[go]['len'] += len(seq)
-                        ret[go]['n_gos'] += len(gos)
-                        ret[go]['orgs'].add(org)
-                    except KeyError:
-                        ret[go] = {'len': len(seq),
-                                   'n_gos': len(gos),
-                                   'orgs': {org}}
-                    try:
-                        go_counts[go] += 1
-                    except KeyError:
-                        go_counts[go] = 1
-
-        for go in ret.keys():
-            ret[go]['len'] /= go_counts[go]
-            ret[go]['n_gos'] /= go_counts[go]
-            ret[go]['n_org'] = len(ret[go]['orgs'])/go_counts[go]
-            ret[go]['orgs'] = None
-            ret[go]['n_samples'] = go_counts[go]
-
-        return ret, go_counts
-
-    def read_pdb_entry(self):
-        file = self.pdb_order[self.pdb_idx]
-        self.pdb_idx += 1
-        path = os.path.join(self.FLAGS.pdbpath, 'split/{}'.format(file))
-        if not os.path.isfile(path):
-            self.logger.warning('File not found: {}'.format(path))
-            return None
-        with open(path, 'r') as pdb_txt_file:
-            ret = {}
-            ret['id'] = file[-10:-6]
-            ret['chain'] = file[-5]
-            ret['sequence'] = pdb_txt_file.readline().strip()
-            ret['secstr'] = pdb_txt_file.readline().strip()
-            ret['disorder'] = pdb_txt_file.readline().strip()
-        return ret
-
-    def parse_pdb(self):
-        """parses pdb file downloaded from https://cdn.rcsb.org/etl/kabschSander/ss_dis.txt.gz and makes masked datasets"""
-        # manual priorities
-        with open(os.path.join(self.FLAGS.pdbpath, 'priorities.txt'), 'r') as ifile:
-            self.pdb_order = [s.strip() for s in ifile.readlines()]
-
-        # prioritize entries wtih ic
-        tmp = [f[3:] for f in os.listdir(os.path.join(self.FLAGS.pdbpath, 'dump_with_ic_2'))]
-        for f in self.pdb_order:
-            if f in tmp:
-                tmp.remove(f)
-        self.pdb_order += tmp
-
-        # prioritize entries that are in pfam
-        tmp = []
-        with open(os.path.join(self.FLAGS.pfampath, 'pfam2pdb.txt'), 'r') as ifile:
-            for line in ifile:
-                line = line.strip().split(';')
-                tmp.append('{}_{}.txt'.format(line[1], line[2]))
-        self.pdb_order += tmp
-
-        tmp = os.listdir(os.path.join(self.FLAGS.pdbpath, 'split'))
-        for f in self.pdb_order:
-            if f in tmp:
-                tmp.remove(f)
-        self.pdb_order += tmp
-
-        self.pdb_idx = 0
-
-        self.masked_dataset_file = open(os.path.join(self.FLAGS.info_path, 'masked_dataset.txt'), 'w')
-
-        complete_entries = 0
-        already_processed = False
-        go_wise = {}
-
-        seq_sets = {}
-        self.logger.debug('Processing {} entries.'.format(self.FLAGS.nepochs))
-        for entries in range(self.FLAGS.nepochs):
-            try:
-                current_entry = self.read_pdb_entry()
-                if not current_entry:
-                    continue
-            except IndexError:
-                self.logger.info('Done at entry {}.'.format(entries))
-                break
-            if os.path.exists(os.path.join(self.FLAGS.pdbpath, 'pdb_files/{}.pdb'.format(current_entry['id']))):
-                # if the file was already downloaded it must not be added to the msa again.
-                self.logger.debug('Entry {} {} was processed before.'.format(current_entry['id'],
-                                                                             current_entry['chain']))
-                already_processed = True
-
-            if not filter_seq(current_entry['sequence']):
-                self.logger.debug('PDB entry {} with ID {} {} '
-                                  'was discarded by the sequence filter.'.format(entries,
-                                                                                 current_entry['id'],
-                                                                                 current_entry['chain']))
-                continue
-
-            gos = self.pdbid2go(current_entry['id'], current_entry['chain'])
-            if not gos:
-                self.logger.debug('GO information for PDB entry '
-                                  '{} with ID {} could not be downloaded'.format(entries, current_entry['id']))
-                continue
-            gos = extend_gos_by_parents(self.GODag, gos, self.logger)
-            if not filter_gos(gos):
-                self.logger.debug('PDB entry {} with ID {} {} was '
-                                  'discarded by the go filter.'.format(entries,
-                                                                       current_entry['id'], current_entry['chain']))
-                continue
-
-            secondary_stats = calc_secondary(current_entry['secstr'])
-            disorder_stats = calc_disorder(current_entry['disorder'])
-            sequence_stats = calc_sequence(current_entry['sequence'])
-
-            success = self.get_pdb_file(current_entry['id'])
-            if not success:
-                self.logger.debug('PDB file for entry {} with PDB '
-                                  'ID {} could not be downloaded'.format(entries, current_entry['id']))
-                continue
-            complete_entries += 1
-            self.masked_dataset_file.write('{}\n'.format(';'.join([current_entry['id'],
-                                                                   current_entry['chain'],
-                                                                   ','.join(gos),
-                                                                   current_entry['sequence'],
-                                                                   current_entry['secstr'],
-                                                                   current_entry['disorder']])))
-            self.logger.debug('Entry {} for PDB ID {} complete.'.format(entries, current_entry['id']))
-
-            if not already_processed:# dump data in go wise files for msas
-                for go in gos:
-                    msa_path = os.path.join(self.FLAGS.pdbpath, 'pdb2msa/{}.txt'.format(go))
-                    seq = current_entry['sequence']
-                    if not go in seq_sets:
-                        seq_sets[go] = set(seq)
-                    else:
-                        if seq in seq_sets[go]:
-                            continue
-                        seq_sets[go].add(seq)
-                    with open(msa_path, 'a') as ofile:
-                        ofile.write('{};{}\n'.format(current_entry['id'], seq))
-
-            length = len(current_entry['sequence'])
-            for go in gos:
-                if go in self.go_info.GOs:
-                    if not go in go_wise.keys():
-                        go_wise[go] = {}
-                    for t in secondary_stats.keys():
-                        try:
-                            go_wise[go]['sec_{}'.format(t)].append(secondary_stats[t]/length)
-                        except:
-                            go_wise[go]['sec_{}'.format(t)] = [secondary_stats[t]/length]
-                    for t in disorder_stats.keys():
-                        try:
-                            go_wise[go]['dis_{}'.format(t)].append(disorder_stats[t]/length)
-                        except:
-                            go_wise[go]['dis_{}'.format(t)] = [disorder_stats[t]/length]
-                    for t in sequence_stats.keys():
-                        try:
-                            go_wise[go]['seq_{}'.format(t)].append(sequence_stats[t]/length)
-                        except:
-                            go_wise[go]['seq_{}'.format(t)] = [sequence_stats[t]/length]
-                    try:
-                        go_wise[go]['n_gos_pdb'] += len(gos)
-                    except:
-                        go_wise[go]['n_gos_pdb'] = len(gos)
-                    try:
-                        go_wise[go]['n_pdbs'] += 1
-                    except:
-                        go_wise[go]['n_pdbs'] = 1
-                    try:
-                        go_wise[go]['pdbs_len'] += length
-                    except:
-                        go_wise[go]['pdbs_len'] = length
-
-            already_processed = False # reset for next entry
-
-        self.logger.debug('Processing worked for {} of {} entries ({:.1f} %).'.format(complete_entries,
-                                                                             self.FLAGS.nepochs,
-                                                                             100*(complete_entries/self.FLAGS.nepochs)))
-        n = None
-        for go in self.go_info.GOs:
-            if not go in go_wise.keys():
-                continue #go_wise[go] = None
-            else:
-                for t in secondary_stats.keys():
-                    if not n:
-                        n = len(go_wise[go]['sec_{}'.format(t)])
-
-                    go_wise[go]['sec_{}'.format(t)] = sum(go_wise[go]['sec_{}'.format(t)]) / n
-                for t in sequence_stats.keys():
-                    go_wise[go]['seq_{}'.format(t)] = sum(go_wise[go]['seq_{}'.format(t)]) / n
-                for t in disorder_stats.keys():
-                    go_wise[go]['dis_{}'.format(t)] = sum(go_wise[go]['dis_{}'.format(t)]) / n
-
-                go_wise[go]['n_pdbs'] = go_wise[go]['n_pdbs'] / n
-                go_wise[go]['pdbs_len'] = go_wise[go]['pdbs_len'] / n
-
-        self.masked_dataset_file.close()
-        self.logger.debug('Wrote masked dataset.')
-        return go_wise
-
-    def pdbid2go(self, pdbid, chain):
-        path = os.path.join(self.FLAGS.pdbpath, 'xml_files/{}.xml'.format(pdbid))
-        fails = 0
-        if not os.path.exists(path):
-            while True:
-                try:
-                    urllib.request.urlretrieve('https://www.rcsb.org/pdb/rest/goTerms?structureId={}'.format(pdbid),
-                                               path)
-                    break
-                except:
-                    if fails == 10:
-                        return False
-                    fails += 1
-        gos = []
-        with open(path, 'r') as ifile:
-            for line in ifile:
-                if '<term id=' in line:  # <term id="GO:0020037" structureId="4HHB" chainId="D">
-                    line = line.split('"')
-                    if line[5] == chain:
-                        gos.append(line[1])
-        return gos
-
-    def get_pdb_file(self, id):
-        path = os.path.join(self.FLAGS.pdbpath, 'pdb_files/{}.pdb'.format(id))
-        if not os.path.exists(path):
-            fails = 0
-            while True:
-                try:
-                    urllib.request.urlretrieve('https://files.rcsb.org/download/{}.pdb'.format(id), path)
-                    break
-                except:
-                    if fails == 10:
-                        return False
-                    fails += 1
-        return True
-
     def test(self):
-        # first train with the model to reload:
-        # the test dataset path has to be specified under -v
+        """
+        Evaluates the model on a test dataset specified by the -validdata flag
+        :return:
+        """
         self.logger.info('Using {} for testing.'.format(self.FLAGS.validdata))
         os.makedirs(os.path.join(self.FLAGS.info_path, 'metrics'), exist_ok=True)
 
+        try:
+            ds_stat_df = pd.read_csv(self.FLAGS.dataset_statistics, index_col=0)
+            ds_stat_df.sort_index()
+        except FileNotFoundError:
+            self.logger.exception("-ds flag not set to an appropriate training dataset statics file.")
+            raise
         # Try to get a GODag:
         if not self.GODag:
             try:
@@ -1269,49 +969,26 @@ class Controller():
                 self.logger.warning('No GO-Dag file found. Information may be incomplete when calculating metrics.')
                 self.GODag = None
 
-        go_counts_path = os.path.join(self.FLAGS.info_path, 'metrics/go_counts.p')
-        ds_info_path = os.path.join(self.FLAGS.info_path, 'metrics/ds_info.p')
-        if not os.path.exists(go_counts_path):
-            self.logger.debug('Counting dataset')
-            ds_info, go_counts = self.count_dataset()
-            with open(go_counts_path, 'wb') as go_counts_file:
-                pickle.dump(go_counts, go_counts_file)
-            with open(ds_info_path, 'wb') as ds_info_file:
-                pickle.dump(ds_info, ds_info_file)
-        else:
-            self.logger.debug('Found counted dataset')
-            with open(go_counts_path, 'rb') as go_counts_file:
-                go_counts = pickle.load(go_counts_file)
-            with open(ds_info_path, 'rb') as ds_info_file:
-                ds_info = pickle.load(ds_info_file)
-
-        if not os.path.exists(os.path.join(self.FLAGS.info_path, 'metrics/per_class_dumps')):
-            # evaluate the test set
-            self.eval_test()
-            self.logger.debug('Evaluation complete.')
-            self.get_metrics()
-            self.logger.debug('Got metrics.')
-        else:
-            self.logger.debug('Found per class dumps.')
+        self.eval_test()
+        self.logger.debug('Evaluation complete.')
+        self.get_metrics()
+        self.logger.debug('Got metrics.')
 
         if not self.pp:
-            # generate metrics npys, etc.
             self.pp = PrettyPlotter(self.FLAGS, self.go_info)
             self.pp.read_per_class_metrics()
             self.logger.debug('Got per class metrics.')
         else:
-            self.logger.debug('Found per class metrics dump.')
-
-        go_wise = self.parse_pdb()
+            self.logger.debug('Found existing pretty plotter!!!')
 
         head = list(self.pp.per_class_metrics_list[0][0])
 
         head = head + ['nGO_children']
-        head = head + ['n_gos', 'len', 'n_org']
-        if go_wise:
-            head = head + list(list(go_wise.values())[0].keys())
+        head = head + ['avg_n_gos', 'avg_len', 'n_orgs']
+        # if go_wise:
+        #     head = head + list(list(go_wise.values())[0].keys())
 
-        head = sorted(head, key= lambda x: x.lower())
+        head = sorted(head, key=lambda x: x.lower())
         head.remove('GO')
         head = ['GO'] + head
         if 'fpr_arr' in head:
@@ -1336,20 +1013,20 @@ class Controller():
                     content = []
                     for category in head:
                         if category == 'nGO_children':
-                            content.append(str(count_children(self.GODag, content[0])))
-                        elif category == 'n_samples':
-                            content.append(str(go_counts[go]))
+                            content.append(len(self.GODag.query_term(go).get_all_children()))
+                        elif category in ['n_samples', 'avg_n_gos', 'avg_len', 'n_orgs']:
+                            content.append(ds_stat_df[category].get(go, default="NaN"))
                         else:
                             try:
-                                content.append(str(ds_info[go][category]))
+                                content.append(str(go_entry[category]))
                             except:
                                 try:
-                                    content.append(str(go_entry[category]))
+                                    content.append(str(go_wise[go][category]))
                                 except:
-                                    try:
-                                        content.append(str(go_wise[go][category]))
-                                    except:
-                                        content.append('')
+                                    content.append('')
+                    content = [str(con) for con in content]
                     ofile.write('{}\n'.format('; '.join(content)))
 
         self.logger.debug('Wrote per class metrics in full_table.')
+        self.plot("", False)
+        self.logger.debug("Performed plotting")

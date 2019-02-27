@@ -1,18 +1,20 @@
 #!/bin/bash
 
+export PATH="/opt/conda/lib:$PATH"
+
 echo "Sequence" $1;
 echo "GOs"      $2;
 echo "Task"     $3;
 
 if [ -z "$1" ]; then
-    SEQ="QRKLEALIRDPRSPINVESLLDGLNSLVLDLDFPALRKNKNIDNFLNRYEKIVKKIRGLQMKAEDYDVVKVIGRGAFGEVQLVRHKASQKVYAMKLLSKFEMIKRSDSAFFWEERDIMAFANSPWVVQLFCAFQDDKYLYMVMEYMPGGDLVNLMSNYDVPEKWAKFYTAEVVLALDAIHSMGLIHRDVKPDNMLLDKHGHLKLADFGTCMKMDETGMVHCDTAVGTPDYISPEVLKSQGGDGYYGRECDWWSVGVFLFEMLVGDTPFYADSLVGTYSKIMDHKNSLCFPEDAEISKHAKNLICAFLTDREVRLGRNGVEEIKQHPFFKNDQWNWDNIRETAAPVVPELSSDIDSSNFDDITFPIPKAFVGNQLPFIGFTYYR";
+    SEQ="GARMVTTFVALYDYESRTETDLSFKKGERLQIVNNTEGDWWLAHSLSTGQTGYIPSNYVAPSDSIQAEEWYFGKITRRESERLLLNAENPRGTFLVRESETTKGAYCLSVSDFDNAKGLNVKHYKIRKLDSGGFYITSRTQFNSLQQLVAYYSKHADGLCHRLTTVCPTSKPQTQGLAKDAWEIPRESLRLEVKLGQGCFGEVWMGTWNGTTRVAIKTLKPGTMSPEAFLQEAQVMKKLRHEKLVQLYAVVSEEPIYIVTEYMNKGSLLDFLKGETGKYLRLPQLVDMSAQIASGMAYVERMNYVHRDLRAANILVGENLVCKVADFGLARLIEDNEYTARQGAKFPIKWTAPEAALYGRFTIKSDVWSFGILLTELTTKGRVPYPGMVNREVLDQVERGYRMPCPPECPESLHDLMCQCWRKEPEERPTFEYLQAFLEDYFTSTEPQYQPGENL";
     echo $SEQ
 else
     SEQ=$1
 fi
 
 if [ -z "$2" ]; then
-    GO="GO:0004672,GO:0005524,GO:0016740";
+    GO="GO:0016301,GO:0005524";
     echo $GO
 else
     GO=$2
@@ -42,10 +44,13 @@ elif [ "$MODE" = "default" ]; then
     
     
     points=$(printf '.%.0s' $(eval echo "{1..$len}"));
-    scores=$(printf '_%.0s' $(eval echo "{1..$len}"));  
+    scores=$(printf '_%.0s' $(eval echo "{1..$len}"));
     echo "AAAA;A;$GO;$SEQ;$points;$scores" > "/results/masked_dataset.txt";
-    python -u /code/DeeProtein/DeeProtein.py -mask=True -restore=True -v /results/;
+    python -u /code/DeeProtein/DeeProtein.py -mask=True -restore=True -v /results/masked_dataset.txt;
+    python -u /code/DeeProtein/scripts/calculate_sensitivity.py /output/out/aa_resolution/masked_AAAA_A_1.txt /output/out/aa_resolution/masked_AAAA_A_1.txt;
     cat /output/out/aa_resolution/masked_AAAA_A_1.txt >> /output/out/results.txt;
+
+    python -u /code/DeeProtein/scripts/plot_sensitivity.py /output/out/aa_resolution/masked_AAAA_A_1.txt "$GO" /output/out/AAAA_A_1.png 
 
 
 else
@@ -57,8 +62,12 @@ else
     scores=$(printf '_%.0s' $(eval echo "{1..$len}"));  
     echo "AAAA;A;$GO;$SEQ;$points;$scores" > "/results/masked_dataset.txt";
     
-    python -u /code/DeeProtein/DeeProtein.py -mask=True -restore=True -v /results/;
+    python -u /code/DeeProtein/DeeProtein.py -mask=True -restore=True -v /results/masked_dataset.txt;
+    python -u /code/DeeProtein/scripts/calculate_sensitivity.py /output/out/aa_resolution/masked_AAAA_A_1.txt /output/out/aa_resolution/masked_AAAA_A_1.txt;
+    
     cp /output/out/aa_resolution/masked_AAAA_A_1.txt /output/out/results.txt;
+    
+    python -u /code/DeeProtein/scripts/plot_sensitivity.py /output/out/aa_resolution/masked_AAAA_A_1.txt "$GO" /output/out/AAAA_A_1.png 
 
 fi
 

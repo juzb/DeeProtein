@@ -11,11 +11,12 @@ import tensorlayer as tl
 from helpers import helpers
 
 
-class Model():
+class Model:
     """
     Model class of dpv2.
     This class holds the DeeProtein model and related functions.
     """
+
     def __init__(self, FLAGS, go_info, is_train=True):
         self.FLAGS = FLAGS
         self.logger = logging.getLogger('{}.model'.format(self.FLAGS.modelname))
@@ -34,11 +35,11 @@ class Model():
         activation = tf.nn.leaky_relu
         self.logger.info('Using {} activation'.format(activation.__name__))
 
-        n_blocks = self.FLAGS.nblocks # has to be larger than 14, original is 29
+        n_blocks = self.FLAGS.nblocks  # has to be larger than 14, original is 29
         assert n_blocks > 14
         self.logger.info('Number of resnet blocks: {}'.format(n_blocks))
 
-        #get a saver:
+        # get a saver:
         try:
             self.saver = tf.train.Saver()
         except ValueError:
@@ -82,55 +83,55 @@ class Model():
                     helpers._add_var_summary(embedding.outputs, 'conv')
 
                 resnet = helpers.resnet_block(embedding, channels=[64, 128],
-                                                   pool_dim=2, is_train=self.is_train,
-                                                   name='res1', activation=activation)
+                                              pool_dim=2, is_train=self.is_train,
+                                              name='res1', activation=activation)
                 resnet = helpers.resnet_block(resnet, channels=[128, 256],
-                                                   pool_dim=2, is_train=self.is_train,
-                                                   name='res2', activation=activation)
+                                              pool_dim=2, is_train=self.is_train,
+                                              name='res2', activation=activation)
                 resnet = helpers.resnet_block(resnet, channels=[256, 512],
-                                                   pool_dim=2, is_train=self.is_train,
-                                                   name='res3', activation=activation)
+                                              pool_dim=2, is_train=self.is_train,
+                                              name='res3', activation=activation)
                 resnet = helpers.resnet_block(resnet, channels=[512, 512],
-                                                   pool_dim=2, is_train=self.is_train,
-                                                   name='res4', activation=activation)
+                                              pool_dim=2, is_train=self.is_train,
+                                              name='res4', activation=activation)
                 resnet = helpers.resnet_block(resnet, channels=[512, 512],
-                                                   pool_dim=2, is_train=self.is_train,
-                                                   name='res5', activation=activation)
+                                              pool_dim=2, is_train=self.is_train,
+                                              name='res5', activation=activation)
                 resnet = helpers.resnet_block(resnet, channels=[512, 512],
-                                                   pool_dim=3, is_train=self.is_train,
-                                                   name='res6', activation=activation)
+                                              pool_dim=3, is_train=self.is_train,
+                                              name='res6', activation=activation)
                 resnet = helpers.resnet_block(resnet, channels=[512, 512],
-                                                   pool_dim=2, is_train=self.is_train,
-                                                   name='res7', activation=activation)
+                                              pool_dim=2, is_train=self.is_train,
+                                              name='res7', activation=activation)
                 resnet = helpers.resnet_block(resnet, channels=[512, 512],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res8', activation=activation)
+                                              pool_dim=None, is_train=self.is_train,
+                                              name='res8', activation=activation)
                 resnet = helpers.resnet_block(resnet, channels=[512, 512],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res9', activation=activation)
+                                              pool_dim=None, is_train=self.is_train,
+                                              name='res9', activation=activation)
                 resnet = helpers.resnet_block(resnet, channels=[512, 512],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res10', activation=activation)
+                                              pool_dim=None, is_train=self.is_train,
+                                              name='res10', activation=activation)
                 resnet = helpers.resnet_block(resnet, channels=[512, 512],
-                                                   pool_dim=None, is_train=self.is_train,
-                                                   name='res11', activation=activation)
+                                              pool_dim=None, is_train=self.is_train,
+                                              name='res11', activation=activation)
                 resnet = helpers.resnet_block(resnet, channels=[512, 512],
-                                                   pool_dim=2, is_train=self.is_train,
-                                                   name='res12')
-                # here stuff is repetetive:
-                for block in range(n_blocks-14): # 12 before, 2 after, current block is always block + 12
+                                              pool_dim=2, is_train=self.is_train,
+                                              name='res12')
+                # here stuff is repetitive:
+                for block in range(n_blocks - 14):  # 12 before, 2 after, current block is always block + 12
                     resnet = helpers.resnet_block(resnet,
                                                   channels=[512, 512],
                                                   pool_dim=None,
                                                   is_train=self.is_train,
-                                                  name='res{}'.format((block+13)),
+                                                  name='res{}'.format((block + 13)),
                                                   activation=activation)
 
-                # first nonrepetetive block
+                # first nonrepetitive block
                 resnet = helpers.resnet_block(resnet,
                                               channels=[512, 1024],
                                               pool_dim=None, is_train=self.is_train,
-                                              name='res{}'.format(n_blocks-1),
+                                              name='res{}'.format(n_blocks - 1),
                                               activation=activation)
                 encoder = helpers.resnet_block(resnet,
                                                channels=[1024, 1024],
@@ -141,18 +142,19 @@ class Model():
             with tf.variable_scope('classifier') as vs:
                 with tf.variable_scope('out1x1') as vs:
                     classifier = tl.layers.Conv1dLayer(encoder,
-                                                        act=tf.identity,
-                                                        shape=[1, 1024, 2 * self.go_info.nclasses],
-                                                        stride=1,
-                                                        padding='SAME',
-                                                        W_init=tf.truncated_normal_initializer(stddev=5e-2),
-                                                        W_init_args={},
-                                                        b_init=tf.constant_initializer(value=0.1),
-                                                        b_init_args={},
-                                                        name='1x1_layer')
+                                                       act=tf.identity,
+                                                       shape=[1, 1024, 2 * self.go_info.nclasses],
+                                                       stride=1,
+                                                       padding='SAME',
+                                                       W_init=tf.truncated_normal_initializer(stddev=5e-2),
+                                                       W_init_args={},
+                                                       b_init=tf.constant_initializer(value=0.1),
+                                                       b_init_args={},
+                                                       name='1x1_layer')
                     # two nodes for each label, one positive, one negative, softmaxed
                     classifier.outputs = tf.reshape(classifier.outputs,
-                                     [self.FLAGS.batchsize, self.go_info.nclasses, 2]) # [Batch, Classes, Pos-Neg]
+                                                    [self.FLAGS.batchsize, self.go_info.nclasses,
+                                                     2])  # [Batch, Classes, Pos-Neg]
         return classifier
 
     def get_loss(self, raw_logits, labels, valid_mode=False):
@@ -174,18 +176,18 @@ class Model():
 
         with tf.variable_scope('loss{}'.format(name_suffix)) as vs:
 
-            softmax_logits = tf.nn.softmax(raw_logits, dim=2, name='logits') # [Batch, classes, Pos-Neg]
+            softmax_logits = tf.nn.softmax(raw_logits, dim=2, name='logits')  # [Batch, classes, Pos-Neg]
             softmax_logits = tf.reshape(softmax_logits,
-                                             [self.FLAGS.batchsize, self.go_info.nclasses, 2],
+                                        [self.FLAGS.batchsize, self.go_info.nclasses, 2],
                                         name='softmax2predictions')
 
-            softmax_logits = softmax_logits[:, :, 0] # [Batch, classes, Pos]
+            softmax_logits = softmax_logits[:, :, 0]  # [Batch, classes, Pos]
             # positives
             positive_predictions = tf.cast(tf.greater(softmax_logits, 0.5), dtype=tf.float32)
             true_positive_predictions = tf.multiply(positive_predictions, labels)
             # negatives
             negative_predictions = tf.cast(tf.less(softmax_logits, 0.5), dtype=tf.float32)
-            negative_labels = tf.cast(tf.equal(labels, 0), dtype=tf.float32)                # [Batch, classes]
+            negative_labels = tf.cast(tf.equal(labels, 0), dtype=tf.float32)  # [Batch, classes]
             true_negative_predictions = tf.multiply(negative_predictions, negative_labels)
             false_negative_predictions = tf.multiply(negative_labels, labels)
             false_positive_predictions = tf.multiply(positive_predictions, negative_labels)
@@ -201,8 +203,8 @@ class Model():
             tnr = tf.divide(nr_true_negatives, tf.reduce_sum(negative_labels))
 
             # accuracy
-            f1_score = tf.divide(nr_true_positives*2,
-                                 tf.add(tf.add(2*nr_true_positives, nr_false_negatives), nr_false_positives))
+            f1_score = tf.divide(nr_true_positives * 2,
+                                 tf.add(tf.add(2 * nr_true_positives, nr_false_negatives), nr_false_positives))
 
             tf.summary.scalar('TPR', tpr)
             tf.summary.scalar('FPR', fpr)
@@ -212,34 +214,34 @@ class Model():
             tf.summary.scalar('avg_pred_positives', tf.divide(nr_pred_positives, self.FLAGS.batchsize))
             tf.summary.scalar('avg_true_positives', tf.divide(nr_true_positives, self.FLAGS.batchsize))
 
-            class_sizes = np.asfarray(list(self.go_info.key2freq.values())) # [classes]
-            mean_class_size = np.mean(class_sizes) # [classes]
-            pos_weights = mean_class_size / class_sizes # [classes]
+            class_sizes = np.asfarray(list(self.go_info.key2freq.values()))  # [classes]
+            mean_class_size = np.mean(class_sizes)  # [classes]
+            pos_weights = mean_class_size / class_sizes  # [classes]
 
             # config.maxClassInbalance prevents too large effective learning rates (i.e. too large gradients)
             assert self.FLAGS.maxclassimbalance >= 1.0
 
-            pos_weights = np.maximum(1.0, np.minimum(self.FLAGS.maxclassimbalance, pos_weights)) # [classes]
-            pos_weights = pos_weights.astype(np.float32) # [classes]
+            pos_weights = np.maximum(1.0, np.minimum(self.FLAGS.maxclassimbalance, pos_weights))  # [classes]
+            pos_weights = pos_weights.astype(np.float32)  # [classes]
 
             # tile the pos weigths:
             pos_weights = tf.reshape(tf.tile(pos_weights,
-                                     multiples=[self.FLAGS.batchsize]),
-                                     shape=[self.FLAGS.batchsize, self.go_info.nclasses]) # [batch, classes]
-            pos_weights = tf.stack([pos_weights, pos_weights], axis=-1) # [batch, classes, Pos-Neg]
+                                             multiples=[self.FLAGS.batchsize]),
+                                     shape=[self.FLAGS.batchsize, self.go_info.nclasses])  # [batch, classes]
+            pos_weights = tf.stack([pos_weights, pos_weights], axis=-1)  # [batch, classes, Pos-Neg]
 
-            inverse_labels = tf.cast(tf.equal(labels, 0), dtype=tf.float32) # [batch, classes]
+            inverse_labels = tf.cast(tf.equal(labels, 0), dtype=tf.float32)  # [batch, classes]
 
-            expanded_labels = tf.stack([labels, inverse_labels], axis=-1) # labels, inverse labels
+            expanded_labels = tf.stack([labels, inverse_labels], axis=-1)  # labels, inverse labels
             expanded_labels = tf.reshape(expanded_labels, shape=[self.FLAGS.batchsize,
-                                                                 self.go_info.nclasses, 2]) # [batch, classes, Pos-Neg]
+                                                                 self.go_info.nclasses, 2])  # [batch, classes, Pos-Neg]
 
             ce_loss = tf.nn.weighted_cross_entropy_with_logits(logits=raw_logits,
                                                                targets=expanded_labels,
                                                                pos_weight=pos_weights)
             ce_mean = tf.reduce_mean(ce_loss, name='celoss_mean')
 
-            #get the l2 loss on weigths of conv layers and dense layers
+            # get the l2 loss on weigths of conv layers and dense layers
             l2_loss = 0
             for w in tl.layers.get_variables_with_name('W_conv1d', train_only=True, printable=False):
                 l2_loss += tf.contrib.layers.l2_regularizer(1e-7)(w)
@@ -255,12 +257,12 @@ class Model():
             self.logger.info("Initialized loss!")
         return loss, f1_score
 
-    def get_opt(self, loss, global_step, vars=[], lr_decay=False, adam=True):
+    def get_opt(self, loss, global_step, vars=None, lr_decay=False, adam=True):
         """Adds an optimizer to the current computational graph.
 
         Args:
           loss: A `Tensor` 0d, Scalar - The loss to minimize.
-          vars: A `list` holding all variables to optimize. If empty all Variables are optmized.
+          vars: A `list` holding all variables to optimize. If None all Variables are optmized.
           adam: A `bool` defining whether to use the adam optimizer or not. Defaults to False
 
         Returns:
@@ -311,11 +313,11 @@ class Model():
         Helper to determine the number of resnet-blocks with pool_dim == 2 and to avoid negative dimesion sizes.
         :return:
         """
-        wstart = self.FLAGS.windowlength//(3*2) #as we pool 3 and pool2 before we start defining the actual blocks
+        wstart = self.FLAGS.windowlength // (3 * 2)  # as we pool 3 and pool2 before we start defining the actual blocks
 
         npools = 0
         while wstart > 3:
-            wstart = wstart//2
+            wstart = wstart // 2
             npools += 1
 
         self.poolblocks = npools
@@ -353,7 +355,7 @@ class Model():
 
         # save also as checkpoint
         if self.saver:
-            ckpt_file_path = os.path.join(param_save_dir, 'complete_model.ckpt' )
+            ckpt_file_path = os.path.join(param_save_dir, 'complete_model.ckpt')
             self.saver.save(session, ckpt_file_path, global_step=step)
             self.logger.info('Saved model to .ckpt !')
         else:
@@ -379,8 +381,8 @@ class Model():
         # custom load_ckpt op:
         d = np.load(file)
 
-        params = [val[1] for val in sorted(d.items(), key=lambda tup: tup[0])] # changed from int(tup[0])
-        params = [p for p in params if not 'outlayer' in p.name] # p is just a numpy array here, doesn't work
+        params = [val[1] for val in sorted(d.items(), key=lambda tup: tup[0])]  # changed from int(tup[0])
+        params = [p for p in params if not 'outlayer' in p.name]  # p is just a numpy array here, doesn't work
 
         assert nparams >= -1 and nparams != 0, \
             'Please specify number of layers to be restored.' \

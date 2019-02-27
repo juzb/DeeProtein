@@ -19,7 +19,7 @@
   },
   "-gofile": {
     "short": "-g",
-    "value": "/data/go_file_1000.txt",
+    "value": "/data/go_file.txt",
     "help": "The file-path to the GO-file holding the classes to model should consider.",
     "type": "str"
   },
@@ -101,15 +101,9 @@
     "help": "If tf should assign increasing space on the GPU or the maximum from the start (TRUE).",
     "type": "str"
   },
-  "-statsonly": {
-    "short": "-s",
-    "value": "False",
-    "help": "Write stats only on existing dumps, needs correct info path",
-    "type": "str"
-  },
   "-restore": {
     "short": "-r",
-    "value": "True",
+    "value": "False",
     "help": "Whether to restore a model or not. Defaults to False. If True a restorepath must be specified under the corresponding flag.",
     "type": "str"
   },
@@ -179,16 +173,10 @@
     "help": "Maximum size of mask that is moved over the sequence",
     "type": "int"
   },
-  "-compare": {
-    "short": "-c",
-    "value": "False",
-    "help": "Compares multiple models based on their dumps, paths specified comma-separated unter -v",
-    "type": "str"
-  },
   "-pltcolors": {
     "short": "-pc",
     "value": "blue,red,orange,green,turk,grey",
-    "help": "Compares multiple models based on their dumps, paths specified comma-separated unter -v",
+    "help": "Comma-seperated list of colors used for plotting",
     "type": "str"
   },
   "-num_datapoint_offset": {
@@ -209,22 +197,16 @@
     "help": "Set to activate test mode. Specify test datset under -v",
     "type": "str"
   },
-  "-pdbpath": {
-    "short": "-pdb",
-    "value": "/path/to/parse_pdb/",
-    "help": "Path to file containing pdb id, sequence, secondary structure, annotated site information",
-    "type": "str"
-  },
-  "-pfampath": {
-    "short": "-pfam",
-    "value": "/path/to/pfam_2",
-    "help": "Path to pfam directory, containing the pfam2pdb file",
-    "type": "str"
-  },
   "-sequence": {
     "short": "-sq",
     "value": "",
     "help": "Sequence to perf",
+    "type": "str"
+  },
+  "-dataset_statistics": {
+    "short": "-ds",
+    "value": "",
+    "help": "Path to the statistic CSV file of the training set. Has to be set for test/eval runs",
     "type": "str"
   }
 }

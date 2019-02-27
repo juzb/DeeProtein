@@ -1,11 +1,12 @@
 import tensorflow as tf
+
 try:
     import tensorlayer as tl
 except ImportError:
     print('Could not import tensorlayer')
 
 
-def resnet_block(inlayer, channels=[128, 256], pool_dim=2, is_train=True, name='scope', activation=tf.nn.relu):
+def resnet_block(inlayer, channels=None, pool_dim=2, is_train=True, name='scope', activation=tf.nn.relu):
     """Define a residual block for DeeProtein.
 
     A residual block consists of two 1d covolutional layers both with a kernel size of 3 and a 1x1 1d convolution.
@@ -13,7 +14,7 @@ def resnet_block(inlayer, channels=[128, 256], pool_dim=2, is_train=True, name='
 
     Args:
       inlayer: A `tl.layer` object holding the input.
-      channels: A `Array` defining the channels.
+      channels: A `Array` defining the channels. Default: [128, 256]
       pool_dim:  A `int32` defining the pool dims, defaults to 2. May be None (no pooling).
       is_train: A `bool` from which dataset (train/valid) to draw the samples.
       summary_collection: A 'str' object defining the collection to which to attach the summaries of the layers.
@@ -23,6 +24,8 @@ def resnet_block(inlayer, channels=[128, 256], pool_dim=2, is_train=True, name='
     Returns:
       A `tl.layer` object holding the Residual Block.
     """
+    if channels is None:
+        channels = [128, 256]
     # calculate the block
     with tf.variable_scope(name) as vs:
         with tf.variable_scope('conv1') as vs:
@@ -44,7 +47,7 @@ def resnet_block(inlayer, channels=[128, 256], pool_dim=2, is_train=True, name='
         with tf.variable_scope('conv2') as vs:
             conv = tl.layers.Conv1dLayer(norm,
                                          act=activation,
-                                         shape=[3, channels[1], channels[1]*2],  # 32 features for each 5x5 patch
+                                         shape=[3, channels[1], channels[1] * 2],  # 32 features for each 5x5 patch
                                          stride=1,
                                          padding='SAME',
                                          W_init=tf.truncated_normal_initializer(stddev=5e-2),
@@ -58,7 +61,7 @@ def resnet_block(inlayer, channels=[128, 256], pool_dim=2, is_train=True, name='
         with tf.variable_scope('1x1') as vs:
             conv = tl.layers.Conv1dLayer(norm,
                                          act=activation,
-                                         shape=[1, channels[1]*2, channels[1]],  # 32 features for each 5x5 patch
+                                         shape=[1, channels[1] * 2, channels[1]],  # 32 features for each 5x5 patch
                                          stride=1,
                                          padding='SAME',
                                          W_init=tf.truncated_normal_initializer(stddev=5e-2),
@@ -87,7 +90,7 @@ def resnet_block(inlayer, channels=[128, 256], pool_dim=2, is_train=True, name='
             if pool_dim:
                 in_shape = inlayer.outputs.shape
                 shortcut = tl.layers.ReshapeLayer(inlayer, [in_shape[0], in_shape[1],
-                                               1, in_shape[2]], name='expand')
+                                                            1, in_shape[2]], name='expand')
 
                 shortcut = tl.layers.PoolLayer(shortcut,
                                                ksize=[1, pool_dim, 1, 1],
@@ -99,11 +102,11 @@ def resnet_block(inlayer, channels=[128, 256], pool_dim=2, is_train=True, name='
                 shortcut = inlayer
             # zero pad the channels
             if channels[0] != channels[1]:
-                paddings = [[0,0],
-                            [0,0],
-                            [0, channels[1]-channels[0]]
+                paddings = [[0, 0],
+                            [0, 0],
+                            [0, channels[1] - channels[0]]
                             ]
-                shortcut = tl.layers.PadLayer(shortcut, paddings=paddings)
+                shortcut = tl.layers.PadLayer(shortcut, padding=paddings)
 
             out = tl.layers.ElementwiseLayer([y, shortcut],
                                              combine_fn=tf.add,
@@ -148,15 +151,16 @@ def _variable_on_cpu(name, shape, initializer, trainable):
     return var
 
 
-class GO_info():
+class GO_info:
     """
     Helper class to hold the GO related information.
     """
+
     def __init__(self, go_file):
         self.go_file = go_file
         self.nclasses = 0
         self.GOs = []
-        self.GO_numbers = [] #the integerized GOs
+        self.GO_numbers = []  # the integerized GOs
         self.go_counts = []
         self.key2freq = {}
         self.key2id = {}

@@ -1,16 +1,17 @@
 import re
 import os
 import glob
+import sys
 import subprocess as sb
 from goatools.obo_parser import GODag
 from collections import OrderedDict
 
 
-class DataPreprocessor():
+class DataPreprocessor:
     def __init__(self, save_dir, read_dir=None, func_only=False, godagfile=''):
         self.filter_AA = True
         self.filter_length = True
-        self.minlength = 150
+        self.minlength = 0
         self.maxlength = 1000
 
         if not func_only:
@@ -87,7 +88,7 @@ class DataPreprocessor():
             for line in in_fobj:
                 line_number += 1
                 if line_number % 1000000 == 0:
-                    self.logfile.write('{} Million lines\n'.format(line_number/1000000))
+                    self.logfile.write('{} Million lines\n'.format(line_number / 1000000))
                     self.logfile.flush()
                 fields = line.strip().split()
                 flag = fields[0]
@@ -131,7 +132,7 @@ class DataPreprocessor():
                 elif flag == 'SQ' and len(fields) >= 2:
                     seq = True
                     uniprot_dict[curr_prot_id]['seq'] = ''
-                elif seq == True:
+                elif seq:
                     if flag == '//':
                         uniprot_dict[curr_prot_id]['F_GO'] = self._full_annotation(curr_F_GOs)
                         uniprot_dict[curr_prot_id]['P_GO'] = self._full_annotation(curr_P_GOs)
@@ -140,26 +141,24 @@ class DataPreprocessor():
 
                         # write the entry to file
                         csv_entry = "{};".format(curr_prot_id)
-                        for key in ['rec_name', 'Pfam', 'protein_existance', 'seq']:
+                        for key in ['seq']:  # 'rec_name', 'Pfam', 'protein_existance',
                             try:
                                 csv_entry += "{};".format(uniprot_dict[curr_prot_id][key])
                             except KeyError:
                                 csv_entry += ";"
 
                         # write the GOs seperated by comma:
-                        for category in ['F_GO', 'P_GO', 'C_GO']:
+                        for category in ['F_GO']:  # ['F_GO', 'P_GO', 'C_GO']:
                             # those are already strings, so we can simply add them
                             csv_entry += '{};'.format(uniprot_dict[curr_prot_id][category])
-
-                        # now add the EC-terms which are stored as list:
-                        csv_entry += ','.join(uniprot_dict[curr_prot_id]['EC'])
-                        csv_entry += ";"
 
                         # close entry
                         csv_entry += "\n"
 
-                        out_csv.write(csv_entry)
-                # <curr_prot_id>;<rec_name>;<Pfam>;<protein_existance>;<seq>;<F_GO1, F_GO2, ...>;<P_GO>;<C_GO>;<EC>
+                        if self._valid_seq(uniprot_dict[curr_prot_id]['seq']):
+                            if len(uniprot_dict[curr_prot_id]['F_GO']) > 0:
+                                out_csv.write(csv_entry)
+                        # <curr_prot_id>;<rec_name>;<Pfam>;<protein_existance>;<seq>;<F_GO1, F_GO2, ...>;<P_GO>;<C_GO>;<EC>
 
                         # reset collectors:
                         curr_prot_id = ''
@@ -206,11 +205,11 @@ class DataPreprocessor():
             for name, seq, fGO, pGO, cGO, EC_nrs in self.uniprot_csv_parser(in_fobj):
                 lines_read += 1
                 if lines_read % 1000000 == 0:
-                    print('Read {}m lines.\n'.format(lines_read/1000000))
+                    print('Read {}m lines.\n'.format(lines_read / 1000000))
                 # iterate through the whole GO annotation and complete it by checking for parents in the DAG
                 if self._valid_seq(seq):
                     full_go = set()
-                    #if __name__ == '__main__':
+                    # if __name__ == '__main__':
                     for GOcat in [(fGO, 'fGO')]:
                         for go in GOcat[0]:
                             # determine if a node has parents and retrieve the set of parent-nodes
@@ -315,14 +314,14 @@ class DataPreprocessor():
             return False
         if self.filter_AA and self.filter_length:
             forbidden_AAs = re.search(r'[BXZOUJ]', seq)
-            if int(self.minlength) <= len(seq) < int(self.maxlength) and not forbidden_AAs:
+            if int(self.minlength) <= len(seq) <= int(self.maxlength) and not forbidden_AAs:
                 return True
         elif self.filter_AA and not self.filter_length:
             forbidden_AAs = re.search(r'[BXZOUJ]', seq)
             if not forbidden_AAs:
                 return True
         elif not self.filter_AA and self.filter_length:
-            if int(self.minlength) <= len(seq) < int(self.maxlength):
+            if int(self.minlength) <= len(seq) <= int(self.maxlength):
                 return True
         else:
             return False
@@ -364,7 +363,7 @@ class DataPreprocessor():
                             num_duplicates += 1
                         num_seqs += 1
             self.logfile.write('Found {} duplicates in a total of {} sequences ({} %).\n\n'.format(
-                num_duplicates, num_seqs, (100*num_duplicates/num_seqs)
+                num_duplicates, num_seqs, (100 * num_duplicates / num_seqs)
             ))
 
     def generate_dataset_by_GO_list(self, GO_file, GO_cat='function'):
@@ -382,7 +381,7 @@ class DataPreprocessor():
         assert GO_cat in ['function', 'pathway', 'location']
 
         csv_by_GO_paths = OrderedDict([('function', os.path.join(self.read_dir, 'csv_by_fGO_duplicate_free')),
-                                      ('pathway', os.path.join(self.read_dir, 'csv_by_pGO_duplicate_free')),
+                                       ('pathway', os.path.join(self.read_dir, 'csv_by_pGO_duplicate_free')),
                                        ('location', os.path.join(self.read_dir, 'csv_by_cGO_duplicate_free'))])
 
         # First shuffle all of the per GO csvs:
@@ -390,7 +389,7 @@ class DataPreprocessor():
             per_class_csvs = glob.glob(os.path.join(path, '*.csv'))
             for fpath in per_class_csvs:
                 if not os.path.exists('{}.shuffled'.format(fpath)):
-                    sb.run(['shuf', fpath,  '-o', '{}.shuffled'.format(fpath)])
+                    sb.run(['shuf', fpath, '-o', '{}.shuffled'.format(fpath)])
 
         # read in the GO_file:
         GOs_to_include = []
@@ -409,7 +408,7 @@ class DataPreprocessor():
 
         train_path = os.path.join(self.save_dir, 'datasets/{}_{}_TRAIN.csv'.format(GO_cat, len(GOs_to_include)))
         valid_path = os.path.join(self.save_dir, 'datasets/{}_{}_VALID.csv'.format(GO_cat, len(GOs_to_include)))
-        test_path  = os.path.join(self.save_dir, 'datasets/{}_{}_TEST.csv'.format(GO_cat, len(GOs_to_include)))
+        test_path = os.path.join(self.save_dir, 'datasets/{}_{}_TEST.csv'.format(GO_cat, len(GOs_to_include)))
         counter = 0
 
         with open(train_path, 'w') as train_fobj:
@@ -429,7 +428,7 @@ class DataPreprocessor():
                                 num_lines = max([num_lines, self.max_write])
                             # get back to the beginning of the file
                             in_fobj.seek(0)
-                            old_len_test_seqs  = len(test_seqs)
+                            old_len_test_seqs = len(test_seqs)
                             old_len_valid_seqs = len(valid_seqs)
                             old_len_train_seqs = len(train_seqs)
                             # parse the go.csv
@@ -452,14 +451,14 @@ class DataPreprocessor():
 
                                 line = ';'.join([name, seq, ','.join(GOs)]) + '\n'
 
-                                if len(test_seqs) <= int(0.1*num_lines):
+                                if len(test_seqs) <= int(0.1 * num_lines):
                                     if seq not in test_seqs:
                                         # write to test
                                         test_fobj.write(line)
                                         # store the sequence to compare all the training seqs to this:
                                         test_seqs.add(seq)
                                         counter += 1
-                                elif len(valid_seqs) <= int(0.2*num_lines):
+                                elif len(valid_seqs) <= int(0.2 * num_lines):
                                     if seq not in valid_seqs and seq not in test_seqs:
                                         # write to valid
                                         valid_fobj.write(line)
@@ -475,7 +474,7 @@ class DataPreprocessor():
                                         counter += 1
 
                         self.logfile.write('{}:\t{}\t{}\t{}\n'.format(GO,
-                                                                      len(test_seqs)  - old_len_test_seqs,
+                                                                      len(test_seqs) - old_len_test_seqs,
                                                                       len(valid_seqs) - old_len_valid_seqs,
                                                                       len(train_seqs) - old_len_train_seqs))
             self.logfile.write('\nFinished writing the sets consisting of a total of {} sequences.\n\n'.format(counter))
@@ -486,10 +485,15 @@ class DataPreprocessor():
             # shuffle the new files
             sb.run(['shuf', train_path, '-o', '{}.shuffled'.format(train_path)])
             sb.run(['shuf', valid_path, '-o', '{}.shuffled'.format(valid_path)])
-            sb.run(['shuf', test_path,  '-o', '{}.shuffled'.format(test_path)])
+            sb.run(['shuf', test_path, '-o', '{}.shuffled'.format(test_path)])
             self.logfile.write('This Shuffling step is unreliable, better shuffle the files manually: shuf in > out\n')
             self.logfile.write('Shuffled the datasets.\n')
 
 
 if __name__ == '__main__':
-    datasetgen = DataPreprocessor('')
+    save_dir = sys.argv[1]
+    up_file = sys.argv[2]
+    godagfile = sys.argv[3]
+
+    datasetgen = DataPreprocessor(save_dir, None, False, godagfile)
+    datasetgen.uniprot_to_csv_on_disk(up_file)

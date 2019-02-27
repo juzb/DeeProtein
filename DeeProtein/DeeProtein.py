@@ -20,8 +20,8 @@ def set_default_options(config_file, parser):
         config_dict = json.load(open_config_file)
 
     # define a mapping from string to callable type:
-    str2type = {'str':   str,
-                'int':   int,
+    str2type = {'str': str,
+                'int': int,
                 'float': float}
 
     for arg in config_dict.keys():
@@ -74,10 +74,7 @@ def main():
     logger = set_up_logger(FLAGS.info_path, FLAGS.modelname)
     controller = cont.Controller(FLAGS)
 
-    if FLAGS.statsonly == 'True':
-        logger.debug('statsonly')
-        controller.plot(step=-1, early=False)
-    elif FLAGS.mask == 'True':
+    if FLAGS.mask == 'True':
         logger.debug('mask')
         controller.evaluate_masked_set(filepath=FLAGS.validdata)
     elif FLAGS.infer == 'True':
@@ -91,9 +88,6 @@ def main():
         with open(os.path.join(FLAGS.info_path, 'results.txt'), 'w') as ofile:
             ofile.write(preds)
         logger.debug(preds)
-    elif FLAGS.compare == 'True':
-        logger.debug('compare')
-        controller.compare()
     elif FLAGS.test == 'True':
         logger.debug('test')
         controller.test()

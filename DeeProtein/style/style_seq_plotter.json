@@ -8,14 +8,14 @@
   "axes.spines.top": "False",
   "axes.spines.right": "False",
   "axes.linewidth": 2,
-  "lines.linewidth": 2,
-  "legend.fontsize": 6,
+  "lines.linewidth": 1,
+  "legend.fontsize": 4,
   "legend.frameon": false,
   "text.color": "#393939",
-  "font.size": 6,
+  "font.size": 4,
   "axes.titlesize": 8,
   "axes.labelsize": 8,
-  "xtick.labelsize": 6,
+  "xtick.labelsize": 5,
   "xtick.color": "#393939",
   "xtick.direction": "out",
   "xtick.major.size": 2,
@@ -30,5 +30,5 @@
   "ytick.minor.size": 1,
   "ytick.minor.width": 0.5,
   "ytick.left": "True",
-  "ytick.labelsize": 6
+  "ytick.labelsize": 5
 }

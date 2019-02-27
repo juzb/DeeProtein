@@ -18,7 +18,7 @@ class Dataset_Gen:
         self.nepochs = FLAGS.nepochs
         self.batchsize = FLAGS.batchsize
         self.windowlength = FLAGS.windowlength
-        self.mask_width = mask_width # just needed for masked datasets
+        self.mask_width = mask_width  # just needed for masked datasets
 
         self.go_info = go_info
         self.wt_seq_str = None
@@ -36,27 +36,17 @@ class Dataset_Gen:
         # hashtable implementation for go-lookup
         self.table_go2id = tf.contrib.lookup.HashTable(
             tf.contrib.lookup.KeyValueTensorInitializer(self.go_info.GOs, self.go_info.GO_numbers), -1)
+        self.dict_go2id = dict(zip(self.go_info.GO_numbers, self.go_info.GOs))  # non-tensorflow variant of the lookup
 
         # dataset definition
         if data == 'seq':
             self.dataset = (tf.data.TextLineDataset(self.data_path)  # Read text file
-                               .map(self.decode_csv_seq))  # Transform each elem by applying decode_csv_seq fn
-            self.dataset = self.dataset.repeat(1)  # Number of epochs per dataset.
-
-        elif data == 'mut':
-            # Save the wt sequence to be able to generate the full sequences from the mutations
-            with open(self.data_path, 'r') as ifile:
-                _ = ifile.readline()
-                self.wt_seq_str = [ifile.readline().strip()]
-            # self.logger.debug('WT-SEQ: \n{}\n\n'.format(self.wt_seq_str[0]))
-            self.dataset = (tf.data.TextLineDataset(self.data_path)  # Read text file
-                               .skip(2) # skip header line and sequence line
-                               .map(self.decode_csv_mut))  # Transform each elem by applying decode_csv_mut fn
+                            .map(self.decode_csv_seq))  # Transform each elem by applying decode_csv_seq fn
             self.dataset = self.dataset.repeat(1)  # Number of epochs per dataset.
 
         elif data == 'mask':
             # get variables ready
-            self.pos = tf.cast(tf.Variable(0), dtype=tf.int32, name='position') # currently masked position
+            self.pos = tf.cast(tf.Variable(0), dtype=tf.int32, name='position')  # currently masked position
 
             if seq:
                 self.wt_seq_str = seq.split(';')[0]
@@ -69,15 +59,18 @@ class Dataset_Gen:
                 self.wt_seq_str = file.split(';')[2]
             self.wt_seq_ten = tf.constant([self.wt_seq_str])
 
-            self.label = []
-            for x in label_str.split(','):
-                self.label.append(self.labels2tensor(tf.constant(x))[1])
+            self.gos = tf.reshape(tf.sparse_tensor_to_dense(
+                tf.string_split(
+                    tf.expand_dims(label_str, 0), ','),
+                '', name='labels'),
+                shape=[-1], name='GOs')
+            self.label = self.table_go2id.lookup(self.gos, name='labels_in_int')
 
             seq_str = tf.sparse_tensor_to_dense(tf.string_split(self.wt_seq_ten, ''), '', name='seq_as_str')
 
             self.one_hot_seq, self.start_pos, self.seq_length = self.seq2tensor(seq_str)
 
-            pos_tensor = tf.range(start=-1,limit= len(self.wt_seq_str))
+            pos_tensor = tf.range(start=-1, limit=len(self.wt_seq_str))
 
             self.dataset = tf.data.Dataset.from_tensor_slices(pos_tensor).map(self.mask)
 
@@ -115,10 +108,10 @@ class Dataset_Gen:
         seq = fields[0, 1]
         labels = fields[0, 2]
         GOs = tf.reshape(tf.sparse_tensor_to_dense(
-                tf.string_split(
-                    tf.expand_dims(labels, 0),
-                    ','),
-                '', name='labels'),
+            tf.string_split(
+                tf.expand_dims(labels, 0),
+                ','),
+            '', name='labels'),
             shape=[-1], name='GOs')
         return name, seq, GOs
 
@@ -147,13 +140,17 @@ class Dataset_Gen:
                 tf.zeros(shape=windowlength, dtype=tf.int32),
                 tf.ones(shape=windowlength, dtype=tf.int32))
             # for dynamic padding with -1 (-1 is translated in a vector of zeros by tf.one_hot
+            size = tf.reshape(tf.subtract(windowlength, seq_length), [1], name='-1padding')
+
             sliced_zeros = tf.slice(to_pad,
                                     tf.constant([0]),
-                                    tf.reshape(tf.subtract(windowlength, seq_length), [1], name='-1padding'))
+                                    size)
             return tf.concat([seq_in_int, sliced_zeros], axis=0, name='padded_seq')
 
         def slice():  # in case the sequence is longer than the windowlength
-            return tf.reshape(tf.slice(seq_in_int, [0], windowlength), windowlength, name='sliced_seq')
+            return tf.reshape(tf.slice(seq_in_int,
+                                       tf.constant([0]),  # [0],
+                                       windowlength), windowlength, name='sliced_seq')
 
         # decide wether to pad or to slice
         seq_correct_len = tf.cond(pred=tf.less_equal(tf.reshape(seq_length, []), tf.reshape(windowlength, [])),
@@ -171,24 +168,31 @@ class Dataset_Gen:
         """
         labels_in_int = self.table_go2id.lookup(labels, name='labels_in_int')
         labels_one_hot = tf.one_hot(labels_in_int, self.go_info.nclasses, name='labels_one_hot')
+
         labels_vector = tf.reduce_sum(labels_one_hot, axis=0, name='labels_vector')
+        labels_vector = tf.cast(tf.greater(labels_vector, 0), tf.float32)
+        labels_vector = tf.reshape(labels_vector, shape=[self.go_info.nclasses], name='labels_reshape')
+
         return labels_vector, labels_in_int
 
     def decode_csv_seq(self, line):
         """Applied to all lines in the csv-file from which the dataset is built. Used for Sequence datasets:
         <Name>;<Sequence>;<GO1>,<GO2>,..."""
         # get relevant fields from the csv
-        _, seq, labels = self.uniprot_csv_parser(line)
+
+        identifier, seq, labels = self.uniprot_csv_parser(line)
 
         seq = tf.expand_dims(seq, 0)
         # encode the sequence and its other features
         seq = tf.sparse_tensor_to_dense(tf.string_split(seq, ''), '', name='seq_as_str')
 
         padded_oh_seq, start_pos, length = self.seq2tensor(seq)
-        features = {'seq':          padded_oh_seq,
-                    'start_pos':    start_pos,
-                    'length':       length,
-                    'depth':        self.depth}
+
+        features = {'seq': padded_oh_seq,
+                    'start_pos': start_pos,
+                    'length': length,
+                    'depth': tf.fill([], self.depth, name='depth'),
+                    'id': identifier}
 
         # encode the labels in a vector ('multi-hot')
         encoded_labels, _ = self.labels2tensor(labels)
@@ -199,6 +203,7 @@ class Dataset_Gen:
         """
         Mask the given sequence position.
         """
+
         def f():
             """
             Helper for tf.cond
@@ -220,10 +225,12 @@ class Dataset_Gen:
                       false_fn=f,
                       name='check_first_seq')
 
+        seq = seq[:1000, :, :]
+
         features = {'seq': seq,
-                    'depth': self.depth,
-                    'start_pos': 0,
-                    'length': 1000,
-                    'mask_width': self.mask_width}
+                    'depth': tf.fill([], self.depth, name='depth'),
+                    'start_pos': self.start_pos,
+                    'length': self.seq_length}  # ,
+        #  'mask_width': self.mask_width}
 
         return [features, pos]
