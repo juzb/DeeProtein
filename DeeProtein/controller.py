@@ -941,8 +941,7 @@ class Controller:
                 # write the validation metrics to a metrics.csv clean the collectors
                 validation_predictions = np.concatenate(validation_predictions, axis=0)
                 validation_labels = np.concatenate(validation_labels, axis=0)
-                validation_ids = np.concatenate(validation_ids, axis=0)
-                self.write_predictions(validation_predictions, validation_labels, validation_ids)
+                self.write_predictions(validation_predictions, validation_labels)
 
             self.logger.info('Finished evaluation in {}.'.format(str(time.time() - starting_time)))
 

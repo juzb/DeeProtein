@@ -18,6 +18,9 @@ style_path = sys.argv[-1]  # 'path/to/style/directory'
 plt.style.use(json.load(open(os.path.join(style_path, 'style.json'), 'r')))
 with open(os.path.join(style_path, 'colors.json'), 'r') as pickle_file:
     colors = json.load(pickle_file)
+matplotlib.rcParams['svg.fonttype'] = 'none'
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
 
 three2single = {'CYS': 'C', 'ASP': 'D', 'SER': 'S', 'GLN': 'Q', 'LYS': 'K',
                 'ILE': 'I', 'PRO': 'P', 'THR': 'T', 'PHE': 'F', 'ASN': 'N',
@@ -209,8 +212,11 @@ def plot_dist(data, plot_path, suffix='', int_range=False):
     ax.set_ylabel('Count')
     plt.tight_layout()
     fig.set_size_inches(2.36, 2.36, forward=True)
-    plt.savefig(os.path.join(plot_path, 'distribution{}.pdf'.format(suffix)))
-    plt.savefig(os.path.join(plot_path, 'distribution{}.png'.format(suffix)))
+    plt.savefig(os.path.join(plot_path, 'distribution{}.pdf'.format(suffix)), transparent=True)
+
+    plt.savefig(os.path.join(plot_path, 'distribution{}.svg'.format(suffix)), transparent=True)
+
+    plt.savefig(os.path.join(plot_path, 'distribution{}.png'.format(suffix)), dpi=300, transparent=True)
     plt.close()
 
 

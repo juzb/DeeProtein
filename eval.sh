@@ -41,7 +41,7 @@ do
     resolve_stats "$ds"
     for idx in 0 1 2 3
         do
-        CUDA_VISIBLE_DEVICES=$idx python "$CODE_DIR"/DeeProtein/DeeProtein.py -n "$ds$idx" -dp true -ne 1 -v ../processed_cafa3/test_cafa3_deepgo_comparison.shuffled.csv -ds $STAT_FILE -g "$GO_LIST" -ip "benchmark_$ds$idx" -mo "$CODE_DIR"/DeeProtein/model/model.py -b 64 -gof "$GO_DAG" -r True -rl False -m False -i False -c False -te True -rp "../models/$ds$idx/saves/" &
+        CUDA_VISIBLE_DEVICES=$idx python "$CODE_DIR"/DeeProtein/DeeProtein.py -n "$ds$idx" -dp true -ne 1 -v ../processed_cafa3/test_cafa3_deepgo_comparison.shuffled.csv -ds $STAT_FILE -g "$GO_LIST" -ip "benchmark_$ds$idx" -mo "$CODE_DIR"/DeeProtein/model/model.py -b 64 -gof "$GO_DAG" -r True -rl False -m False -i False  -te True -rp "../models/$ds$idx/saves/" &
         echo "deeprotein testing for comparison against deepgo" >> /dev/stderr
     done
     wait
@@ -54,7 +54,7 @@ do
     resolve_stats "$ds"
     for idx in 0 1 2 3
         do
-        CUDA_VISIBLE_DEVICES=$idx python "$CODE_DIR"/DeeProtein/DeeProtein.py -n "$ds$idx" -dp true -ne 1 -v ../processed_cafa3/test_cafa3.shuffled.csv -ds $STAT_FILE -g "$GO_LIST" -ip "full_$ds$idx" -mo "$CODE_DIR"/DeeProtein/model/model.py -b 64 -gof "$GO_DAG" -r True -rl False -m False -i False -c False -te True -rp "../models/$ds$idx/saves/" &
+        CUDA_VISIBLE_DEVICES=$idx python "$CODE_DIR"/DeeProtein/DeeProtein.py -n "$ds$idx" -dp true -ne 1 -v ../processed_cafa3/test_cafa3.shuffled.csv -ds $STAT_FILE -g "$GO_LIST" -ip "full_$ds$idx" -mo "$CODE_DIR"/DeeProtein/model/model.py -b 64 -gof "$GO_DAG" -r True -rl False -m False -i False  -te True -rp "../models/$ds$idx/saves/" &
         echo "deeprotein testing on full cafa3 test set" >> /dev/stderr
     done
     wait

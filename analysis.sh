@@ -10,11 +10,11 @@ for ds in "sp_" #"ca_" "up_"
     # Calculate distances to ligands
     mkdir -p "$ds"ligand_binding
 
-    python "$CODE_DIR"/DeeProtein/scripts/distance.py  sensitivity/"$ds"combined_mean/ rcsb/pdb_files/ instructions/ligand_binding.csv "$ds"ligand_binding/ 5 "$CODE_DIR"/DeeProtein/style/
+    python "$CODE_DIR"/DeeProtein/scripts/distance.py  sensitivity/"$ds"combined_mean/ rcsb/pdb_files/ instructions/ligand_binding.csv "$ds"ligand_binding/ 8 "$CODE_DIR"/DeeProtein/style/
 
     mkdir -p "$ds"active_site
 
-    python "$CODE_DIR"/DeeProtein/scripts/distance.py sensitivity/"$ds"combined_mean/ rcsb/pdb_files/ instructions/active_site.csv "$ds"active_site/ 5 "$CODE_DIR"/DeeProtein/style/
+    python "$CODE_DIR"/DeeProtein/scripts/distance.py sensitivity/"$ds"combined_mean/ rcsb/pdb_files/ instructions/active_site.csv "$ds"active_site/ 8 "$CODE_DIR"/DeeProtein/style/
 
    # fuse with information content
     python "$CODE_DIR"/DeeProtein/scripts/add_ic.py sensitivity/"$ds"combined_full/ rcsb/pfam_files/ rcsb/pdb_chain_pfam.csv

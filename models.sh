@@ -31,7 +31,7 @@ do
 
     for idx in 0 1 2 3
         do
-        CUDA_VISIBLE_DEVICES="$idx" python "$CODE_DIR"/DeeProtein/DeeProtein.py -n "$ds$idx" -dp true -ne "$ne" -t "$td" -v ../processed_cafa3/test_cafa3_deepgo_comparison.shuffled.csv -g "$GO_LIST" -ip "$ds$idx" -mo "$CODE_DIR"/DeeProtein/model/model.py -b 64 -va 100000 -gof "$GO_DAG" -r False -rl False -m False -i False -c False -te False &
+        CUDA_VISIBLE_DEVICES="$idx" python "$CODE_DIR"/DeeProtein/DeeProtein.py -n "$ds$idx" -dp true -ne "$ne" -t "$td" -v ../processed_cafa3/test_cafa3_deepgo_comparison.shuffled.csv -g "$GO_LIST" -ip "$ds$idx" -mo "$CODE_DIR"/DeeProtein/model/model.py -b 64 -va 100000 -gof "$GO_DAG" -r False -rl False -m False -i False -te False &
         echo "DeeProtein training $ds$idx" >> /dev/stderr
     done
     wait
